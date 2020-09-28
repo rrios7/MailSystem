@@ -1,0 +1,15 @@
+<RCC>
+    <qresource prefix="/">
+        <file>icons/create.png</file>
+        <file>icons/delete.png</file>
+        <file>icons/downarrow.png</file>
+        <file>icons/eye.png</file>
+        <file>icons/inbox.png</file>
+        <file>icons/pencil.png</file>
+        <file>icons/save.png</file>
+        <file>icons/search.png</file>
+        <file>icons/send.png</file>
+        <file>icons/settings.png</file>
+        <file>icons/uparrow.png</file>
+    </qresource>
+</RCC>
