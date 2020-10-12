@@ -23,6 +23,7 @@ SOURCES += \
     messagebox.cpp
 
 HEADERS += \
+    csv.h \
     email.h \
     emailtools.h \
     list.h \

@@ -17,6 +17,8 @@ void readEmailList(List<Email>& emailList);
 bool isIdInUse(const long long& id);
 bool isValidEmail(const char* email);
 bool equalEmails(const char* a, const char* b);
+
+void createBackup();
 }  // namespace EmailTools
 
 #endif  // EMAILTOOLS_H

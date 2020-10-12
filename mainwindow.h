@@ -23,6 +23,7 @@ class MainWindow : public QMainWindow {
  private slots:
   // Sidebar slots
   void on_inboxButton_clicked();
+  void on_backupButton_clicked();
 
   // Inbox slots
   void on_searchButton_clicked();
@@ -42,6 +43,10 @@ class MainWindow : public QMainWindow {
   void on_bccLineEdit_editingFinished();
 
   void on_idSpinBox_editingFinished();
+
+  // Backup Slots
+
+  void on_createBackupButton_clicked();
 
  private:
   // Pseudo slots

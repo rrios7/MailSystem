@@ -14,7 +14,7 @@ MainWindow::MainWindow(QWidget* parent)
   ui->setupUi(this);
 
   // UI Cofiguration
-  this->setWindowFlag(Qt::FramelessWindowHint);
+  setWindowFlag(Qt::FramelessWindowHint);
   ui->mailTableWidget->horizontalHeader()->setSectionResizeMode(
       QHeaderView::Stretch);
 }
@@ -53,6 +53,7 @@ void MainWindow::onDeleteButtonClicked() {
 
   Email email{id};
   EmailTools::writeEmail(email);
+  MessageBox::display("Email deleted successfully");
   openInbox();
 }
 
@@ -83,6 +84,7 @@ void MainWindow::populateEmailTable(List<Email> emailList) {
     readButton->setMinimumSize(25, 25);
     readButton->setIconSize(QSize(20, 20));
     readButton->setStyleSheet("border-radius: 12px;");
+    readButton->setFocusPolicy(Qt::FocusPolicy::NoFocus);
     connect(readButton, &QPushButton::clicked, this,
             &MainWindow::onReadButtonClicked);
 
@@ -94,6 +96,7 @@ void MainWindow::populateEmailTable(List<Email> emailList) {
         "QPushButton {border-radius: 12px; background-color: rgb(82, 224, "
         "102);}"
         "QPushButton:hover { background-color: rgb(39, 216, 63);}");
+    editButton->setFocusPolicy(Qt::FocusPolicy::NoFocus);
     connect(editButton, &QPushButton::clicked, this,
             &MainWindow::onEditButtonClicked);
 
@@ -104,6 +107,7 @@ void MainWindow::populateEmailTable(List<Email> emailList) {
     deleteButton->setStyleSheet(
         "QPushButton {border-radius: 12px; background-color: rgb(242, 22, 43);}"
         "QPushButton:hover { background-color: rgb(203, 11, 29);}");
+    deleteButton->setFocusPolicy(Qt::FocusPolicy::NoFocus);
     connect(deleteButton, &QPushButton::clicked, this,
             &MainWindow::onDeleteButtonClicked);
 
@@ -335,6 +339,10 @@ void MainWindow::on_inboxButton_clicked() {
   openInbox();
 }
 
+void MainWindow::on_backupButton_clicked() {
+  ui->content->setCurrentIndex(2);
+}
+
 // Inbox slots
 
 void MainWindow::on_searchButton_clicked() {
@@ -425,4 +433,9 @@ void MainWindow::on_writeButton_clicked() {
   MessageBox::display("Email written successfully");
   clearEmailData();
   openInbox();
+}
+
+void MainWindow::on_createBackupButton_clicked() {
+  EmailTools::createBackup();
+  MessageBox::display("Backup created successfully");
 }
