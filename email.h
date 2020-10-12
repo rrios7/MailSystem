@@ -1,13 +1,16 @@
 #ifndef EMAIL_H
 #define EMAIL_H
 
+#include <string>
+
 class Email {
  public:
   Email();
+  Email(const long long id);
   Email(const Email& other);
 
   long long getId() const;
-  void setId(const long long& id);
+  void setId(const long long id);
 
   const char* getDate() const;
   void setDate(const char* const date);

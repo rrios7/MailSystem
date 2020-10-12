@@ -3,6 +3,8 @@
 
 Email::Email() {}
 
+Email::Email(const long long id) : id{id} {}
+
 Email::Email(const Email& other) {
   copyData(other);
 }
@@ -11,7 +13,7 @@ long long Email::getId() const {
   return this->id;
 }
 
-void Email::setId(const long long& id) {
+void Email::setId(const long long id) {
   this->id = id;
 }
 

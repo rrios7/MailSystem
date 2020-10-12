@@ -1,5 +1,6 @@
 #include "mainwindow.h"
 #include <QDate>
+#include <QDebug>
 #include <QTime>
 #include "emailtools.h"
 #include "messagebox.h"
@@ -30,57 +31,95 @@ void MainWindow::onTimeout() {
 }
 
 void MainWindow::onReadButtonClicked() {
-  QWidget* widget = qobject_cast<QWidget*>(sender()->parent());
-  if (widget) {
-    int row = ui->mailTableWidget->indexAt(widget->pos()).row();
-    long long id = ui->mailTableWidget->item(row, 0)->text().toLongLong();
-    openEmail(id, true);
-  }
+  long long id = getClickedId();
+  if (id == -1)
+    return;
+
+  openEmail(id, true);
 }
 
 void MainWindow::onEditButtonClicked() {
-  QWidget* widget = qobject_cast<QWidget*>(sender()->parent());
-  if (widget) {
-    int row = ui->mailTableWidget->indexAt(widget->pos()).row();
-    long long id = ui->mailTableWidget->item(row, 0)->text().toLongLong();
-    openEmail(id, false);
-  }
+  long long id = getClickedId();
+  if (id == -1)
+    return;
+
+  openEmail(id, false);
 }
 
-void MainWindow::populateEmailTable(const Email& email) {
-  ui->mailTableWidget->clearContents();
-  ui->mailTableWidget->setRowCount(1);
+void MainWindow::onDeleteButtonClicked() {
+  long long id = getClickedId();
+  if (id == -1)
+    return;
 
-  QTableWidgetItem* id = new QTableWidgetItem(QString::number(email.getId()));
-  QTableWidgetItem* sender = new QTableWidgetItem(email.getSender());
-  QTableWidgetItem* subject = new QTableWidgetItem(email.getSubject());
-  QWidget* widget = new QWidget();
-  QPushButton* readButton = new QPushButton();
-  QPushButton* editButton = new QPushButton();
-  QHBoxLayout* layout = new QHBoxLayout(widget);
-  readButton->setIcon(QIcon("://icons/eye.png"));
-  readButton->setMinimumSize(25, 25);
-  readButton->setIconSize(QSize(20, 20));
-  readButton->setStyleSheet("border-radius: 12px;");
-  connect(readButton, &QPushButton::clicked, this,
-          &MainWindow::onReadButtonClicked);
-  editButton->setIcon(QIcon("://icons/pencil.png"));
-  editButton->setMinimumSize(25, 25);
-  editButton->setIconSize(QSize(20, 20));
-  editButton->setStyleSheet(
-      "QPushButton {border-radius: 12px; background-color: rgb(82, 224, 102);}"
-      "QPushButton:hover { background-color: rgb(39, 216, 63);}");
-  connect(editButton, &QPushButton::clicked, this,
-          &MainWindow::onEditButtonClicked);
-  layout->addWidget(readButton);
-  layout->addWidget(editButton);
-  layout->setAlignment(Qt::AlignCenter);
-  layout->setContentsMargins(2, 0, 2, 0);
-  widget->setLayout(layout);
-  ui->mailTableWidget->setItem(0, 0, id);
-  ui->mailTableWidget->setItem(0, 1, sender);
-  ui->mailTableWidget->setItem(0, 2, subject);
-  ui->mailTableWidget->setCellWidget(0, 3, widget);
+  Email email{id};
+  EmailTools::writeEmail(email);
+  openInbox();
+}
+
+// Class Methods
+long long MainWindow::getClickedId() {
+  QWidget* widget = qobject_cast<QWidget*>(sender()->parent());
+  if (!widget)
+    return -1;
+
+  int row = ui->mailTableWidget->indexAt(widget->pos()).row();
+  long long id = ui->mailTableWidget->item(row, 0)->text().toLongLong();
+  return id;
+}
+
+void MainWindow::populateEmailTable(List<Email> emailList) {
+  ui->mailTableWidget->clearContents();
+  ui->mailTableWidget->setRowCount(emailList.length());
+
+  int row = 0;
+  for (Email email : emailList) {
+    QWidget* widget = new QWidget();
+    QTableWidgetItem* id = new QTableWidgetItem(QString::number(email.getId()));
+    QTableWidgetItem* sender = new QTableWidgetItem(email.getSender());
+    QTableWidgetItem* subject = new QTableWidgetItem(email.getSubject());
+
+    QPushButton* readButton = new QPushButton();
+    readButton->setIcon(QIcon("://icons/eye.png"));
+    readButton->setMinimumSize(25, 25);
+    readButton->setIconSize(QSize(20, 20));
+    readButton->setStyleSheet("border-radius: 12px;");
+    connect(readButton, &QPushButton::clicked, this,
+            &MainWindow::onReadButtonClicked);
+
+    QPushButton* editButton = new QPushButton();
+    editButton->setIcon(QIcon("://icons/pencil.png"));
+    editButton->setMinimumSize(25, 25);
+    editButton->setIconSize(QSize(20, 20));
+    editButton->setStyleSheet(
+        "QPushButton {border-radius: 12px; background-color: rgb(82, 224, "
+        "102);}"
+        "QPushButton:hover { background-color: rgb(39, 216, 63);}");
+    connect(editButton, &QPushButton::clicked, this,
+            &MainWindow::onEditButtonClicked);
+
+    QPushButton* deleteButton = new QPushButton();
+    deleteButton->setIcon(QIcon("://icons/delete.png"));
+    deleteButton->setMinimumSize(25, 25);
+    deleteButton->setIconSize(QSize(20, 20));
+    deleteButton->setStyleSheet(
+        "QPushButton {border-radius: 12px; background-color: rgb(242, 22, 43);}"
+        "QPushButton:hover { background-color: rgb(203, 11, 29);}");
+    connect(deleteButton, &QPushButton::clicked, this,
+            &MainWindow::onDeleteButtonClicked);
+
+    QHBoxLayout* layout = new QHBoxLayout(widget);
+    layout->addWidget(readButton);
+    layout->addWidget(editButton);
+    layout->addWidget(deleteButton);
+    layout->setAlignment(Qt::AlignCenter);
+    layout->setContentsMargins(2, 0, 2, 0);
+    widget->setLayout(layout);
+    ui->mailTableWidget->setItem(row, 0, id);
+    ui->mailTableWidget->setItem(row, 1, sender);
+    ui->mailTableWidget->setItem(row, 2, subject);
+    ui->mailTableWidget->setCellWidget(row, 3, widget);
+    ++row;
+  }
 
   ui->mailTableWidget->setEditTriggers(QTableWidget::NoEditTriggers);
 }
@@ -99,6 +138,39 @@ void MainWindow::disconnectTimer() {
   timer->stop();
 }
 
+void MainWindow::searchById(const long long id) {
+  Email email = EmailTools::readEmail(id);
+  bool emailExists = EmailTools::isValidEmail(email.getSender());
+
+  if (!emailExists) {
+    MessageBox::display("Couldn't find an email with that ID");
+    clearEmailTable();
+    return;
+  }
+
+  populateEmailTable(List<Email>{email});
+}
+
+void MainWindow::searchBySender(const char* sender) {
+  List<Email> inbox;
+  EmailTools::readInbox(inbox);
+
+  List<Email> emailList;
+
+  for (Email email : inbox) {
+    if (EmailTools::equalEmails(email.getSender(), sender)) {
+      emailList.pushBack(email);
+    }
+  }
+
+  if (emailList.empty()) {
+    MessageBox::display("Couldn't find an email with that sender");
+    clearEmailTable();
+    return;
+  }
+  populateEmailTable(emailList);
+}
+
 void MainWindow::openInbox() {
   ui->content->setCurrentIndex(0);
   disconnectTimer();
@@ -107,14 +179,14 @@ void MainWindow::openInbox() {
   clearEmailTable();
 }
 
-void MainWindow::openEmail(const long long& id, const bool& readOnly) {
-  loadEmailData(EmailTools::read(id));
+void MainWindow::openEmail(const long long id, const bool readOnly) {
+  loadEmailData(EmailTools::readEmail(id));
   setEmailControls(readOnly);
   displayEmailData();
   ui->content->setCurrentIndex(1);
 }
 
-void MainWindow::setEmailControls(const bool& readOnly) {
+void MainWindow::setEmailControls(const bool readOnly) {
   ui->idSpinBox->setEnabled(false);
 
   if (readOnly) {
@@ -266,18 +338,29 @@ void MainWindow::on_inboxButton_clicked() {
 // Inbox slots
 
 void MainWindow::on_searchButton_clicked() {
-  long long id = ui->searchSpinBox->value();
-  Email email = EmailTools::read(id);
-  bool emailExists = EmailTools::isValidEmail(email.getSender());
+  QString query = ui->searchLineEdit->text();
 
-  if (!emailExists) {
-    MessageBox::display("Couldn't find an email with that ID");
+  if (query.isEmpty()) {
+    MessageBox::display("Please enter a valid ID or Sender");
+    clearEmailTable();
+    return;
+  }
+
+  bool successfulConversion;
+  long long id = query.toLongLong(&successfulConversion);
+
+  if (!successfulConversion && !validateEmail(ui->searchLineEdit)) {
+    MessageBox::display("Please enter a valid email");
     clearEmailTable();
     return;
   }
 
   on_inboxButton_clicked();
-  populateEmailTable(email);
+
+  if (successfulConversion)
+    searchById(id);
+  else
+    searchBySender(query.toStdString().c_str());
 }
 
 void MainWindow::on_newEmailButton_clicked() {
@@ -338,7 +421,7 @@ void MainWindow::on_writeButton_clicked() {
   std::string content = ui->contentLineEdit->toPlainText().toStdString();
   newEmail.setContent(content.c_str());
 
-  EmailTools::write(newEmail);
+  EmailTools::writeEmail(newEmail);
   MessageBox::display("Email written successfully");
   clearEmailData();
   openInbox();

@@ -5,6 +5,7 @@
 #include <QMainWindow>
 #include <QTimer>
 #include "email.h"
+#include "list.h"
 
 QT_BEGIN_NAMESPACE
 namespace Ui {
@@ -47,18 +48,23 @@ class MainWindow : public QMainWindow {
   void onTimeout();
   void onReadButtonClicked();
   void onEditButtonClicked();
+  void onDeleteButtonClicked();
 
   // Class Methods
-  void populateEmailTable(const Email& email);
+  long long getClickedId();
+  void populateEmailTable(List<Email> emailList);
   void clearEmailTable();
 
   void connectTimer();
   void disconnectTimer();
 
-  void openInbox();
-  void openEmail(const long long& id, const bool& readOnly);
+  void searchById(const long long id);
+  void searchBySender(const char* sender);
 
-  void setEmailControls(const bool& readOnly);
+  void openInbox();
+  void openEmail(const long long id, const bool readOnly);
+
+  void setEmailControls(const bool readOnly);
   void resetEmailControls();
 
   void loadEmailData(const Email& email);

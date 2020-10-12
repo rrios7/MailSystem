@@ -397,37 +397,6 @@ QHeaderView::section {
                <string>Inbox</string>
               </property>
              </widget>
-             <widget class="QSpinBox" name="searchSpinBox">
-              <property name="geometry">
-               <rect>
-                <x>540</x>
-                <y>0</y>
-                <width>500</width>
-                <height>30</height>
-               </rect>
-              </property>
-              <property name="minimumSize">
-               <size>
-                <width>500</width>
-                <height>30</height>
-               </size>
-              </property>
-              <property name="maximumSize">
-               <size>
-                <width>30</width>
-                <height>16777215</height>
-               </size>
-              </property>
-              <property name="font">
-               <font>
-                <family>Montserrat</family>
-                <pointsize>11</pointsize>
-               </font>
-              </property>
-              <property name="maximum">
-               <number>999999999</number>
-              </property>
-             </widget>
              <widget class="QPushButton" name="searchButton">
               <property name="geometry">
                <rect>
@@ -464,6 +433,25 @@ QHeaderView::section {
               <property name="icon">
                <iconset resource="resources.qrc">
                 <normaloff>:/icons/search.png</normaloff>:/icons/search.png</iconset>
+              </property>
+             </widget>
+             <widget class="QLineEdit" name="searchLineEdit">
+              <property name="geometry">
+               <rect>
+                <x>650</x>
+                <y>0</y>
+                <width>391</width>
+                <height>31</height>
+               </rect>
+              </property>
+              <property name="styleSheet">
+               <string notr="true"/>
+              </property>
+              <property name="maxLength">
+               <number>50</number>
+              </property>
+              <property name="placeholderText">
+               <string>ID/Sender</string>
               </property>
              </widget>
             </widget>
@@ -910,7 +898,6 @@ QHeaderView::section {
  <tabstops>
   <tabstop>newEmailButton</tabstop>
   <tabstop>mailTableWidget</tabstop>
-  <tabstop>searchSpinBox</tabstop>
   <tabstop>searchButton</tabstop>
   <tabstop>idSpinBox</tabstop>
   <tabstop>subjectLineEdit</tabstop>

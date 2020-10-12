@@ -25,6 +25,7 @@ SOURCES += \
 HEADERS += \
     email.h \
     emailtools.h \
+    list.h \
     mainwindow.h \
     messagebox.h
 
