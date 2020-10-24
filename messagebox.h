@@ -10,14 +10,13 @@ class MessageBox;
 class MessageBox : public QDialog
 {
   Q_OBJECT
-
  public:
-  explicit MessageBox(QWidget* parent = nullptr, const QString& msg = "");
+  explicit MessageBox(QWidget* parent = nullptr,
+                      const QString& msg = "",
+                      bool question = false);
   ~MessageBox();
-  static void display(const QString& msg);
-
- private slots:
-  void on_okButton_clicked();
+  static int display(const QString& msg);
+  static int question(const QString& msg);
 
  private:
   Ui::MessageBox *ui;

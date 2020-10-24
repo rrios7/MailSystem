@@ -12,5 +12,6 @@
         <file>icons/settings.png</file>
         <file>icons/uparrow.png</file>
         <file>icons/security.png</file>
+        <file>icons/supervisor.png</file>
     </qresource>
 </RCC>

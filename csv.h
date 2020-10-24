@@ -2,10 +2,135 @@
 #define CSV_H
 
 #include <fstream>
+#include <limits>
 #include <sstream>
 #include <string>
+#include "list.h"
 
 namespace CSV {
+class Reader {
+ private:
+  enum State { NoQuote, Quote, QuotedQuote, Accepted };
+
+ public:
+  Reader() {}
+
+  Reader(const std::string& filename) : file{filename} { skipBOM(); }
+
+  void open(const std::string& filename) {
+    if (file.is_open())
+      file.close();
+
+    file.open(filename);
+    skipBOM();
+  }
+
+  void close() { file.close(); }
+
+  void reset() {
+    file.clear();
+    file.seekg(0);
+  }
+
+  void skipHeaders() {
+    file.ignore(std::numeric_limits<std::streamsize>::max(), '\r');
+  }
+
+  bool next() {
+    if (data.empty())
+      std::getline(file, data, '\r');
+
+    return !data.empty();
+  }
+
+  List<std::string> getNextRow() {
+    List<std::string> tokens;
+
+    if (data.empty())
+      std::getline(file, data, '\r');
+
+    while (data.size() > 0)
+      tokens.pushBack(tokenize());
+
+    return tokens;
+  }
+
+  std::string getNextField() {
+    if (data.empty())
+      std::getline(file, data, '\r');
+
+    return tokenize();
+  }
+
+ private:
+  void skipBOM() {
+    char b = file.get();
+    char o = file.get();
+    char m = file.get();
+    if (b != (char)0xEF || o != (char)0xBB || m != (char)0xBF)
+      file.seekg(0);
+  }
+
+  std::string tokenize() {
+    std::string token;
+    State state = State::NoQuote;
+    std::string::iterator it;
+
+    for (it = data.begin(); it != data.end(); ++it) {
+      char c = *it;
+
+      if (state == State::Accepted)
+        break;
+
+      switch (state) {
+        case State::NoQuote:
+          switch (c) {
+            case ',':
+              state = State::Accepted;
+              break;
+            case '"':
+              state = State::Quote;
+              break;
+            default:
+              token.push_back(c);
+              break;
+          }
+          break;
+        case State::Quote:
+          switch (c) {
+            case '"':
+              state = State::QuotedQuote;
+              break;
+            default:
+              token.push_back(c);
+              break;
+          }
+          break;
+        case State::QuotedQuote:
+          switch (c) {
+            case ',':
+              state = State::Accepted;
+              break;
+            case '"':
+              state = State::Quote;
+              token.push_back('"');
+              break;
+          }
+          break;
+        default:
+          break;
+      }
+    }
+
+    data = std::string(it, data.end());
+    return token;
+  }
+
+ private:
+  std::ifstream file;
+  std::string data;
+};
+
 class Writer {
  public:
   Writer(const std::string& filename,
@@ -16,7 +141,7 @@ class Writer {
         delimiter{delimiter},
         fieldCounter{0} {}
 
-  ~Writer() {
+  void flush() {
     std::ofstream file{filename};
 
     if (!file.good())
@@ -44,7 +169,7 @@ class Writer {
 
     if (++fieldCounter == columns) {
       fieldCounter = 0;
-      data << std::endl;
+      data << "\r";
     } else {
       data << delimiter;
     }
@@ -81,9 +206,6 @@ class Writer {
   int fieldCounter;
   std::stringstream data;
 };
-
-class Reader {};
-
 }  // namespace CSV
 
 #endif  // CSV_H

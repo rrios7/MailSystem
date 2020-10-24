@@ -2,7 +2,7 @@ QT       += core gui
 
 greaterThan(QT_MAJOR_VERSION, 4): QT += widgets
 
-CONFIG += c++11
+CONFIG += c++14
 
 # The following define makes your compiler emit warnings if you use
 # any Qt feature that has been marked deprecated (the exact warnings
@@ -16,21 +16,32 @@ DEFINES += QT_DEPRECATED_WARNINGS
 #DEFINES += QT_DISABLE_DEPRECATED_BEFORE=0x060000    # disables all the APIs deprecated before Qt 6.0.0
 
 SOURCES += \
+    backupwindow.cpp \
     email.cpp \
-    emailtools.cpp \
+    emailwindow.cpp \
+    inboxwindow.cpp \
     main.cpp \
     mainwindow.cpp \
-    messagebox.cpp
+    messagebox.cpp \
+    tools.cpp
 
 HEADERS += \
+    backupwindow.h \
     csv.h \
     email.h \
-    emailtools.h \
+    emaildao.h \
+    emailwindow.h \
+    inboxwindow.h \
     list.h \
     mainwindow.h \
-    messagebox.h
+    messagebox.h \
+    tools.h \
+    windowdata.h
 
 FORMS += \
+    backupwindow.ui \
+    emailwindow.ui \
+    inboxwindow.ui \
     mainwindow.ui \
     messagebox.ui
 
