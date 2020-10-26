@@ -2,6 +2,7 @@
 #include "ui_backupwindow.h"
 
 #include <QFileDialog>
+#include <fstream>
 #include "emaildao.h"
 #include "messagebox.h"
 #include "tools.h"
@@ -13,8 +14,7 @@ BackupWindow::BackupWindow(QWidget* parent)
       QHeaderView::Stretch);
 }
 
-BackupWindow::~BackupWindow()
-{
+BackupWindow::~BackupWindow() {
   delete ui;
 }
 
@@ -23,7 +23,16 @@ void BackupWindow::writeEmail() {
   writeEmail(WindowData::getInstance().getEmail().getId(), false);
 }
 
-void BackupWindow::writeEmail(long long id, bool deleteMode) {
+void BackupWindow::writeEmail(const long long id, bool deleteMode) {
+  if (managedFile.right(3) == "csv")
+    writeEmailToCSV(id, deleteMode);
+  else
+    writeEmailToProprietary(id, deleteMode);
+
+  clearEmailTable();
+}
+
+void BackupWindow::writeEmailToCSV(const long long id, const bool deleteMode) {
   CSV::Reader reader(managedFile.toStdString());
   reader.skipHeaders();
 
@@ -45,7 +54,33 @@ void BackupWindow::writeEmail(long long id, bool deleteMode) {
   reader.close();
   writer.flush();
   renameBackup("temp.csv", managedFile.toStdString().c_str());
-  clearEmailTable();
+}
+
+void BackupWindow::writeEmailToProprietary(const long long id,
+                                           const bool deleteMode) {
+  std::ifstream reader{managedFile.toStdString(), std::ios::binary};
+  std::ofstream writer{"temp.bin", std::ios::binary};
+
+  while (!reader.eof()) {
+    Email email;
+    reader >> email;
+
+    if (email.getId() == -1)
+      break;
+
+    if (email.getId() == id) {
+      if (deleteMode) {
+        continue;
+      } else {
+        writer << WindowData::getInstance().getEmail();
+        continue;
+      }
+    }
+    writer << email;
+  }
+  reader.close();
+  writer.close();
+  renameBackup("temp.bin", managedFile.toStdString().c_str());
 }
 
 void BackupWindow::renameBackup(const char* oldName, const char* newName) {
@@ -66,9 +101,24 @@ void BackupWindow::openEmail(long long id,
 }
 
 void BackupWindow::searchById(const long long id) {
+  searchResults.clear();
+
+  if (managedFile.right(3) == "csv")
+    searchByIdCSV(id);
+  else
+    searchByIdProprietary(id);
+
+  if (searchResults.empty()) {
+    MessageBox::display("Couldn't find an email with that ID");
+    clearEmailTable();
+    return;
+  }
+  populateEmailTable();
+}
+
+void BackupWindow::searchByIdCSV(const long long id) {
   CSV::Reader reader(managedFile.toStdString());
   reader.skipHeaders();
-  searchResults.clear();
 
   do {
     Email email = readNextEmail(reader);
@@ -77,27 +127,30 @@ void BackupWindow::searchById(const long long id) {
       break;
     }
   } while (reader.next());
+}
 
-  if (searchResults.empty()) {
-    MessageBox::display("Couldn't find an email with that ID");
-    clearEmailTable();
-    return;
+void BackupWindow::searchByIdProprietary(const long long id) {
+  std::ifstream file{managedFile.toStdString(), std::ios::binary};
+
+  while (!file.eof()) {
+    Email email;
+    file >> email;
+
+    if (email.getId() == -1)
+      break;
+
+    if (email.getId() == id)
+      searchResults.pushBack(email);
   }
-
-  populateEmailTable();
 }
 
 void BackupWindow::searchBySender(const char* sender) {
-  CSV::Reader reader(managedFile.toStdString());
-  reader.skipHeaders();
   searchResults.clear();
 
-  do {
-    Email email = readNextEmail(reader);
-    if (Tools::equalEmails(email.getSender(), sender)) {
-      searchResults.pushBack(email);
-    }
-  } while (reader.next());
+  if (managedFile.right(3) == "csv")
+    searchBySenderCSV(sender);
+  else
+    searchBySenderProprietary(sender);
 
   if (searchResults.empty()) {
     MessageBox::display("Couldn't find an email with that sender");
@@ -105,6 +158,33 @@ void BackupWindow::searchBySender(const char* sender) {
     return;
   }
   populateEmailTable();
+}
+
+void BackupWindow::searchBySenderCSV(const char* sender) {
+  CSV::Reader reader(managedFile.toStdString());
+  reader.skipHeaders();
+
+  do {
+    Email email = readNextEmail(reader);
+    if (Tools::equalEmails(email.getSender(), sender)) {
+      searchResults.pushBack(email);
+    }
+  } while (reader.next());
+}
+
+void BackupWindow::searchBySenderProprietary(const char* sender) {
+  std::ifstream file{managedFile.toStdString(), std::ios::binary};
+
+  while (!file.eof()) {
+    Email email;
+    file >> email;
+
+    if (email.getId() == -1)
+      break;
+
+    if (Tools::equalEmails(email.getSender(), sender))
+      searchResults.pushBack(email);
+  }
 }
 
 void BackupWindow::clearEmailTable() {
@@ -149,7 +229,8 @@ void BackupWindow::populateEmailTable() {
     deleteButton->setMinimumSize(25, 25);
     deleteButton->setIconSize(QSize(20, 20));
     deleteButton->setStyleSheet(
-        "QPushButton {border-radius: 12px; background-color: rgb(242, 22, 43);}"
+        "QPushButton {border-radius: 12px; background-color: rgb(242, 22, "
+        "43);}"
         "QPushButton:hover { background-color: rgb(203, 11, 29);}");
     deleteButton->setFocusPolicy(Qt::FocusPolicy::NoFocus);
     connect(deleteButton, &QPushButton::clicked, this,
@@ -172,7 +253,7 @@ void BackupWindow::populateEmailTable() {
   ui->mailTableWidget->setEditTriggers(QTableWidget::NoEditTriggers);
 }
 
-void BackupWindow::exportBackup(const QString& fileName) {
+void BackupWindow::exportToCSV(const QString& fileName) {
   EmailDAO& db = EmailDAO::getInstance();
   CSV::Writer writer(fileName.toStdString(), 9);
 
@@ -185,6 +266,64 @@ void BackupWindow::exportBackup(const QString& fileName) {
     }
     email = db.read(++id);
   }
+}
+
+void BackupWindow::exportToProprietary(const QString& fileName) {
+  EmailDAO& db = EmailDAO::getInstance();
+  std::ofstream file{fileName.toStdString(), std::ios::binary};
+
+  long long id = 0;
+  Email email = db.read(id);
+  while (db.next()) {
+    if (email.getId() == id && Tools::isValidEmail(email.getSender())) {
+      file << email;
+    }
+    email = db.read(++id);
+  }
+}
+
+void BackupWindow::importFromCSV(const QString& fileName) {
+  CSV::Reader reader(fileName.toStdString());
+  reader.skipHeaders();
+  do {
+    Email email = readNextEmail(reader);
+    if (Tools::isIdInUse(email.getId())) {
+      if (QDialog::Accepted ==
+          MessageBox::question(
+              "This email {ID: " + QString::number(email.getId()) +
+              "} alredy exists, do you wish to overwrite it?")) {
+        EmailDAO::getInstance().write(email);
+        MessageBox::display("Email overwritten successfully");
+      }
+    } else {
+      EmailDAO::getInstance().write(email);
+    }
+  } while (reader.next());
+  MessageBox::display("Backup imported successfully");
+}
+
+void BackupWindow::importFromProprietary(const QString& fileName) {
+  std::ifstream file{fileName.toStdString(), std::ios::binary};
+  while (!file.eof()) {
+    Email email;
+    file >> email;
+
+    if (email.getId() == -1)
+      break;
+
+    if (Tools::isIdInUse(email.getId())) {
+      if (QDialog::Accepted ==
+          MessageBox::question(
+              "This email {ID: " + QString::number(email.getId()) +
+              "} alredy exists, do you wish to overwrite it?")) {
+        EmailDAO::getInstance().write(email);
+        MessageBox::display("Email overwritten successfully");
+      }
+    } else {
+      EmailDAO::getInstance().write(email);
+    }
+  }
+  MessageBox::display("Backup imported successfully");
 }
 
 void BackupWindow::writeHeaderToBackup(CSV::Writer& writer) {
@@ -259,35 +398,29 @@ long long BackupWindow::getClickedId() {
 }
 
 void BackupWindow::on_exportButton_clicked() {
-  QString fileName = QFileDialog::getSaveFileName(this, "Backup", "C:/",
-                                                  "CSV Backup Files (*.csv)");
+  QString fileName = QFileDialog::getSaveFileName(
+      this, "Backup", "C:/",
+      "CSV Backup Files (*.csv);; Proprietary Backup Files (*.bin)");
+
   if (fileName != "") {
-    exportBackup(fileName);
+    if (fileName.right(3) == "csv")
+      exportToCSV(fileName);
+    else
+      exportToProprietary(fileName);
     MessageBox::display("Backup exported successfully");
   }
 }
 
 void BackupWindow::on_importButton_clicked() {
-  QString fileName = QFileDialog::getOpenFileName(this, "Backup", "C:/",
-                                                  "CSV Backup Files (*.csv)");
+  QString fileName = QFileDialog::getOpenFileName(
+      this, "Backup", "C:/",
+      "CSV Backup Files (*.csv);; Proprietary Backup Files (*.bin)");
+
   if (fileName != "") {
-    CSV::Reader reader(fileName.toStdString());
-    reader.skipHeaders();
-    do {
-      Email email = readNextEmail(reader);
-      if (Tools::isIdInUse(email.getId())) {
-        if (QDialog::Accepted ==
-            MessageBox::question(
-                "This email {ID: " + QString::number(email.getId()) +
-                "} alredy exists, do you wish to overwrite it?")) {
-          EmailDAO::getInstance().write(email);
-          MessageBox::display("Email overwritten successfully");
-        }
-      } else {
-        EmailDAO::getInstance().write(email);
-      }
-    } while (reader.next());
-    MessageBox::display("Backup imported successfully");
+    if (fileName.right(3) == "csv")
+      importFromCSV(fileName);
+    else
+      importFromProprietary(fileName);
   }
 }
 
@@ -301,8 +434,9 @@ void BackupWindow::on_manageButton_clicked() {
     return;
   }
 
-  QString fileName = QFileDialog::getOpenFileName(this, "Backup", "C:/",
-                                                  "CSV Backup Files (*.csv)");
+  QString fileName = QFileDialog::getOpenFileName(
+      this, "Backup", "C:/",
+      "CSV Backup Files (*.csv);; Proprietary Backup Files (*.bin)");
   if (fileName != "") {
     managedFile = fileName;
     ui->managedLabel->setText(managedFile);

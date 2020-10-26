@@ -101,3 +101,87 @@ Email& Email::operator=(const Email& other) {
 bool Email::operator==(const Email& other) {
   return this->id == other.id;
 }
+
+std::ifstream& operator>>(std::ifstream& file, Email& email) {
+  int field = 1;
+  char* buffer = new char[1];
+
+  while (field < 10) {
+    long long length;
+    file.read(reinterpret_cast<char*>(&length), sizeof(length));
+
+    if (file.fail()) {
+      email.setId(-1);
+      break;
+    }
+
+    if (field != 1) {
+      delete[] buffer;
+      buffer = new char[length];
+      file.read(buffer, length);
+    }
+
+    switch (field) {
+      case 1:
+        email.id = length;
+        break;
+      case 2:
+        strcpy(email.date, buffer);
+        break;
+      case 3:
+        strcpy(email.time, buffer);
+        break;
+      case 4:
+        strcpy(email.subject, buffer);
+        break;
+      case 5:
+        strcpy(email.sender, buffer);
+        break;
+      case 6:
+        strcpy(email.receiver, buffer);
+        break;
+      case 7:
+        strcpy(email.cc, buffer);
+        break;
+      case 8:
+        strcpy(email.bcc, buffer);
+        break;
+      case 9:
+        strcpy(email.content, buffer);
+        break;
+    }
+
+    ++field;
+  }
+  return file;
+}
+
+std::ofstream& operator<<(std::ofstream& file, Email& email) {
+  long long length;
+  file.write(reinterpret_cast<char*>(&email.id), sizeof(email.id));
+  length = std::strlen(email.date) + 1;
+  file.write(reinterpret_cast<char*>(&length), sizeof(length));
+  file.write(reinterpret_cast<char*>(&email.date), length);
+  length = std::strlen(email.time) + 1;
+  file.write(reinterpret_cast<char*>(&length), sizeof(length));
+  file.write(reinterpret_cast<char*>(&email.time), length);
+  length = std::strlen(email.subject) + 1;
+  file.write(reinterpret_cast<char*>(&length), sizeof(length));
+  file.write(reinterpret_cast<char*>(&email.subject), length);
+  length = std::strlen(email.sender) + 1;
+  file.write(reinterpret_cast<char*>(&length), sizeof(length));
+  file.write(reinterpret_cast<char*>(&email.sender), length);
+  length = std::strlen(email.receiver) + 1;
+  file.write(reinterpret_cast<char*>(&length), sizeof(length));
+  file.write(reinterpret_cast<char*>(&email.receiver), length);
+  length = std::strlen(email.cc) + 1;
+  file.write(reinterpret_cast<char*>(&length), sizeof(length));
+  file.write(reinterpret_cast<char*>(&email.cc), length);
+  length = std::strlen(email.bcc) + 1;
+  file.write(reinterpret_cast<char*>(&length), sizeof(length));
+  file.write(reinterpret_cast<char*>(&email.bcc), length);
+  length = std::strlen(email.content) + 1;
+  file.write(reinterpret_cast<char*>(&length), sizeof(length));
+  file.write(reinterpret_cast<char*>(&email.content), length);
+  return file;
+}

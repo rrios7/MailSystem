@@ -23,18 +23,30 @@ class BackupWindow : public QWidget
 
   // Class Methods
  private:
-  void writeEmail(long long id, bool deleteMode);
+  void writeEmail(const long long id, const bool deleteMode);
+  void writeEmailToCSV(const long long id, const bool deleteMode);
+  void writeEmailToProprietary(const long long id, const bool deleteMode);
+
   void renameBackup(const char* oldName, const char* newName);
 
-  void openEmail(long long id, const WindowData::Operation operation);
+  void openEmail(const long long id, const WindowData::Operation operation);
 
   void searchById(const long long id);
+  void searchByIdCSV(const long long id);
+  void searchByIdProprietary(const long long id);
+
   void searchBySender(const char* sender);
+  void searchBySenderCSV(const char* sender);
+  void searchBySenderProprietary(const char* sender);
 
   void clearEmailTable();
   void populateEmailTable();
 
-  void exportBackup(const QString& fileName);
+  void exportToCSV(const QString& fileName);
+  void exportToProprietary(const QString& fileName);
+
+  void importFromCSV(const QString& fileName);
+  void importFromProprietary(const QString& fileName);
 
   Email readNextEmail(CSV::Reader& reader);
   void writeHeaderToBackup(CSV::Writer& writer);

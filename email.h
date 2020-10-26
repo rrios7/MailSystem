@@ -1,6 +1,7 @@
 #ifndef EMAIL_H
 #define EMAIL_H
 
+#include <fstream>
 #include <string>
 
 class Email {
@@ -40,6 +41,9 @@ class Email {
 
   Email& operator=(const Email& ohter);
   bool operator==(const Email& other);
+
+  friend std::ifstream& operator>>(std::ifstream& is, Email& c);
+  friend std::ofstream& operator<<(std::ofstream& os, Email& c);
 
  private:
   const static int dateLength = 10;
