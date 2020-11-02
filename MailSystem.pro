@@ -23,10 +23,12 @@ SOURCES += \
     main.cpp \
     mainwindow.cpp \
     messagebox.cpp \
+    primaryindex.cpp \
     settingswindow.cpp \
     tools.cpp
 
 HEADERS += \
+    avltree.h \
     backupwindow.h \
     csv.h \
     email.h \
@@ -36,6 +38,7 @@ HEADERS += \
     list.h \
     mainwindow.h \
     messagebox.h \
+    primaryindex.h \
     settingswindow.h \
     tools.h \
     vector.h \

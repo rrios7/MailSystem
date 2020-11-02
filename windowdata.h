@@ -11,7 +11,7 @@ class WindowData {
   }
 
  private:
-  WindowData() {}
+  WindowData() : memorySearch{false}, primaryIndexTree{NoTree} {}
 
  public:
   WindowData(WindowData const&) = delete;
@@ -20,6 +20,7 @@ class WindowData {
  public:
   enum Page { InboxPage = 0, EmailPage, BackupPage, SettingsPage };
   enum Operation { None = 0, Read, Write, Update, Delete };
+  enum Tree { NoTree = 0, AVL, RedBlack };
 
  public:
   Email& getEmail() { return email; }
@@ -32,14 +33,18 @@ class WindowData {
   void setPreviousPage(const Page& page) { previousPage = page; }
 
   bool isMemorySearchEnabled() const { return memorySearch; }
-
   void setMemorySearch(bool value) { memorySearch = value; }
+
+  Tree getPrimaryIndexTree() const { return primaryIndexTree; }
+
+  void setPrimaryIndexTree(const Tree& value) { primaryIndexTree = value; }
 
  private:
   Email email;
   Operation operation;
   Page previousPage;
   bool memorySearch;
+  Tree primaryIndexTree;
 };
 
 #endif  // WINDOWDATA_H

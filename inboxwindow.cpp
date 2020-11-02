@@ -1,6 +1,7 @@
 #include "inboxwindow.h"
 #include "ui_inboxwindow.h"
 
+#include <QDebug>
 #include "emaildao.h"
 #include "emailwindow.h"
 #include "messagebox.h"
@@ -39,20 +40,27 @@ void InboxWindow::loadInboxToMemory() {
 
   while (db.next()) {
     if (email.getId() == id && Tools::isValidEmail(email.getSender())) {
-      inbox.pushBack(email);
+      if (WindowData::getInstance().isMemorySearchEnabled())
+        vectorInbox.pushBack(email);
+      if (WindowData::getInstance().getPrimaryIndexTree() == WindowData::AVL)
+        avlInbox.insertData(PrimaryIndex{
+            email.getId(),
+            email.getId() * static_cast<long long>(sizeof(email))});
     }
     email = db.read(++id);
   }
 
-  inbox.sort();
+  if (WindowData::getInstance().isMemorySearchEnabled())
+    vectorInbox.sort();
 }
 
 void InboxWindow::searchById(const long long id) {
   searchResults.clear();
 
-  Email email = EmailDAO::getInstance().read(id);
-  if (Tools::isValidEmail(email.getSender()))
-    searchResults.pushBack(email);
+  if (WindowData::getInstance().getPrimaryIndexTree() == WindowData::AVL)
+    searchByIdInAVL(id);
+  else
+    searchByIdInFile(id);
 
   if (searchResults.empty()) {
     MessageBox::display("Couldn't find an email with that ID");
@@ -61,6 +69,25 @@ void InboxWindow::searchById(const long long id) {
   }
 
   populateEmailTable();
+}
+
+void InboxWindow::searchByIdInFile(const long long id) {
+  Email email = EmailDAO::getInstance().read(id);
+  if (Tools::isValidEmail(email.getSender()))
+    searchResults.pushBack(email);
+}
+
+void InboxWindow::searchByIdInAVL(const long long id) {
+  if (avlInbox.isEmpty())
+    loadInboxToMemory();
+
+  qDebug() << "Altura del AVL: " << avlInbox.getHeight();
+
+  PrimaryIndex query{id};
+  auto result = avlInbox.findData(query);
+  if (result != nullptr)
+    searchResults.pushBack(
+        EmailDAO::getInstance().read(result->getData().getId()));
 }
 
 void InboxWindow::searchBySender(const char* sender) {
@@ -95,23 +122,24 @@ void InboxWindow::searchBySenderInFile(const char* sender) {
 }
 
 void InboxWindow::searchBySenderInMemory(const char* sender) {
-  if (inbox.empty())
+  if (vectorInbox.empty())
     loadInboxToMemory();
 
   Email query;
   query.setSender(sender);
 
-  int pos = inbox.binarySearch(query);
+  int pos = vectorInbox.binarySearch(query);
 
   if (pos == -1)
     return;
 
-  while (pos - 1 >= 0 && Tools::equalEmails(inbox[pos - 1].getSender(), sender))
+  while (pos - 1 >= 0 &&
+         Tools::equalEmails(vectorInbox[pos - 1].getSender(), sender))
     --pos;
 
-  while (pos < inbox.length() &&
-         Tools::equalEmails(inbox[pos].getSender(), sender))
-    searchResults.pushBack(inbox[pos++]);
+  while (pos < vectorInbox.length() &&
+         Tools::equalEmails(vectorInbox[pos].getSender(), sender))
+    searchResults.pushBack(vectorInbox[pos++]);
 }
 
 void InboxWindow::clearEmailTable() {
