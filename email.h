@@ -41,6 +41,7 @@ class Email {
 
   Email& operator=(const Email& ohter);
   bool operator==(const Email& other);
+  bool operator<(const Email& other);
 
   friend std::ifstream& operator>>(std::ifstream& is, Email& c);
   friend std::ofstream& operator<<(std::ofstream& os, Email& c);

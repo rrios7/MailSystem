@@ -21,6 +21,7 @@ InboxWindow::~InboxWindow()
 // Class Methods
 void InboxWindow::writeEmail() {
   EmailDAO::getInstance().write(WindowData::getInstance().getEmail());
+  loadInboxToMemory();
 }
 
 void InboxWindow::openEmail(long long id,
@@ -31,39 +32,86 @@ void InboxWindow::openEmail(long long id,
   emit showPage(WindowData::EmailPage);
 }
 
-void InboxWindow::searchById(const long long id) {
-  Email email = EmailDAO::getInstance().read(id);
-  bool emailExists = Tools::isValidEmail(email.getSender());
+void InboxWindow::loadInboxToMemory() {
+  EmailDAO& db = EmailDAO::getInstance();
+  long long id = 0;
+  Email email = db.read(id);
 
-  if (!emailExists) {
+  while (db.next()) {
+    if (email.getId() == id && Tools::isValidEmail(email.getSender())) {
+      inbox.pushBack(email);
+    }
+    email = db.read(++id);
+  }
+
+  inbox.sort();
+}
+
+void InboxWindow::searchById(const long long id) {
+  searchResults.clear();
+
+  Email email = EmailDAO::getInstance().read(id);
+  if (Tools::isValidEmail(email.getSender()))
+    searchResults.pushBack(email);
+
+  if (searchResults.empty()) {
     MessageBox::display("Couldn't find an email with that ID");
     clearEmailTable();
     return;
   }
 
-  populateEmailTable(List<Email>{email});
+  populateEmailTable();
 }
 
 void InboxWindow::searchBySender(const char* sender) {
+  searchResults.clear();
+
+  if (WindowData::getInstance().isMemorySearchEnabled())
+    searchBySenderInMemory(sender);
+  else
+    searchBySenderInFile(sender);
+
+  if (searchResults.empty()) {
+    MessageBox::display("Couldn't find an email with that sender");
+    clearEmailTable();
+    return;
+  }
+
+  populateEmailTable();
+}
+
+void InboxWindow::searchBySenderInFile(const char* sender) {
   EmailDAO& db = EmailDAO::getInstance();
-  List<Email> emailList;
 
   long long id = 0;
   Email email = db.read(id);
 
   while (db.next()) {
     if (email.getId() == id && Tools::equalEmails(email.getSender(), sender)) {
-      emailList.pushBack(email);
+      searchResults.pushBack(email);
     }
     email = db.read(++id);
   }
+}
 
-  if (emailList.empty()) {
-    MessageBox::display("Couldn't find an email with that sender");
-    clearEmailTable();
+void InboxWindow::searchBySenderInMemory(const char* sender) {
+  if (inbox.empty())
+    loadInboxToMemory();
+
+  Email query;
+  query.setSender(sender);
+
+  int pos = inbox.binarySearch(query);
+
+  if (pos == -1)
     return;
-  }
-  populateEmailTable(emailList);
+
+  while (pos - 1 >= 0 && Tools::equalEmails(inbox[pos - 1].getSender(), sender))
+    --pos;
+
+  while (pos < inbox.length() &&
+         Tools::equalEmails(inbox[pos].getSender(), sender))
+    searchResults.pushBack(inbox[pos++]);
 }
 
 void InboxWindow::clearEmailTable() {
@@ -71,12 +119,12 @@ void InboxWindow::clearEmailTable() {
   ui->mailTableWidget->setRowCount(0);
 }
 
-void InboxWindow::populateEmailTable(List<Email> emailList) {
+void InboxWindow::populateEmailTable() {
   ui->mailTableWidget->clearContents();
-  ui->mailTableWidget->setRowCount(emailList.length());
+  ui->mailTableWidget->setRowCount(searchResults.length());
 
   int row = 0;
-  for (Email email : emailList) {
+  for (Email email : searchResults) {
     QWidget* widget = new QWidget();
     QTableWidgetItem* id = new QTableWidgetItem(QString::number(email.getId()));
     QTableWidgetItem* sender = new QTableWidgetItem(email.getSender());
@@ -108,7 +156,8 @@ void InboxWindow::populateEmailTable(List<Email> emailList) {
     deleteButton->setMinimumSize(25, 25);
     deleteButton->setIconSize(QSize(20, 20));
     deleteButton->setStyleSheet(
-        "QPushButton {border-radius: 12px; background-color: rgb(242, 22, 43);}"
+        "QPushButton {border-radius: 12px; background-color: rgb(242, 22, "
+        "43);}"
         "QPushButton:hover { background-color: rgb(203, 11, 29);}");
     deleteButton->setFocusPolicy(Qt::FocusPolicy::NoFocus);
     connect(deleteButton, &QPushButton::clicked, this,
@@ -157,6 +206,7 @@ void InboxWindow::onDeleteButtonClicked() {
   EmailDAO::getInstance().write(email);
   MessageBox::display("Email deleted successfully");
   clearEmailTable();
+  loadInboxToMemory();
 }
 
 long long InboxWindow::getClickedId() {

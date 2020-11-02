@@ -99,7 +99,11 @@ Email& Email::operator=(const Email& other) {
 }
 
 bool Email::operator==(const Email& other) {
-  return this->id == other.id;
+  return strcmp(this->sender, other.sender) == 0;
+}
+
+bool Email::operator<(const Email& other) {
+  return strcmp(this->sender, other.getSender()) < 0;
 }
 
 std::ifstream& operator>>(std::ifstream& file, Email& email) {

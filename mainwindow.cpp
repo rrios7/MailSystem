@@ -6,12 +6,14 @@ MainWindow::MainWindow(QWidget* parent)
       ui{new Ui::MainWindow},
       inboxWindow{new InboxWindow},
       emailWindow{new EmailWindow},
-      backupWindow{new BackupWindow} {
+      backupWindow{new BackupWindow},
+      settingsWindow{new SettingsWindow} {
   ui->setupUi(this);
 
   ui->content->addWidget(inboxWindow);
   ui->content->addWidget(emailWindow);
   ui->content->addWidget(backupWindow);
+  ui->content->addWidget(settingsWindow);
   setWindowFlag(Qt::FramelessWindowHint);
 
   connect(inboxWindow, &InboxWindow::showPage, this, &MainWindow::showPage);
@@ -44,6 +46,9 @@ void MainWindow::showPage(const WindowData::Page page) {
       data.setOperation(WindowData::None);
       emailWindow->stopTimer();
       break;
+    case WindowData::SettingsPage:
+      data.setOperation(WindowData::None);
+      break;
   }
 
   ui->content->setCurrentIndex(page);
@@ -55,4 +60,8 @@ void MainWindow::on_inboxButton_clicked() {
 
 void MainWindow::on_backupButton_clicked() {
   showPage(WindowData::BackupPage);
+}
+
+void MainWindow::on_settingsButton_clicked() {
+  showPage(WindowData::SettingsPage);
 }

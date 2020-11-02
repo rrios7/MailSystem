@@ -5,6 +5,7 @@
 #include "backupwindow.h"
 #include "emailwindow.h"
 #include "inboxwindow.h"
+#include "settingswindow.h"
 #include "windowdata.h"
 
 QT_BEGIN_NAMESPACE
@@ -29,12 +30,15 @@ class MainWindow : public QMainWindow {
 
   void on_backupButton_clicked();
 
+  void on_settingsButton_clicked();
+
  private:
   Ui::MainWindow* ui;
 
   InboxWindow* inboxWindow;
   EmailWindow* emailWindow;
   BackupWindow* backupWindow;
+  SettingsWindow* settingsWindow;
 };
 
 #endif  // MAINWINDOW_H

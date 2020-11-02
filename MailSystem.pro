@@ -23,6 +23,7 @@ SOURCES += \
     main.cpp \
     mainwindow.cpp \
     messagebox.cpp \
+    settingswindow.cpp \
     tools.cpp
 
 HEADERS += \
@@ -35,7 +36,9 @@ HEADERS += \
     list.h \
     mainwindow.h \
     messagebox.h \
+    settingswindow.h \
     tools.h \
+    vector.h \
     windowdata.h
 
 FORMS += \
@@ -43,7 +46,8 @@ FORMS += \
     emailwindow.ui \
     inboxwindow.ui \
     mainwindow.ui \
-    messagebox.ui
+    messagebox.ui \
+    settingswindow.ui
 
 # Default rules for deployment.
 qnx: target.path = /tmp/$${TARGET}/bin

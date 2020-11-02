@@ -13,5 +13,6 @@
         <file>icons/uparrow.png</file>
         <file>icons/security.png</file>
         <file>icons/supervisor.png</file>
+        <file>icons/checked.png</file>
     </qresource>
 </RCC>

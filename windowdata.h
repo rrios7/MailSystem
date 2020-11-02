@@ -18,8 +18,7 @@ class WindowData {
   void operator=(WindowData const&) = delete;
 
  public:
- public:
-  enum Page { InboxPage = 0, EmailPage, BackupPage };
+  enum Page { InboxPage = 0, EmailPage, BackupPage, SettingsPage };
   enum Operation { None = 0, Read, Write, Update, Delete };
 
  public:
@@ -32,10 +31,15 @@ class WindowData {
   Page getPreviousPage() const { return previousPage; }
   void setPreviousPage(const Page& page) { previousPage = page; }
 
+  bool isMemorySearchEnabled() const { return memorySearch; }
+
+  void setMemorySearch(bool value) { memorySearch = value; }
+
  private:
   Email email;
   Operation operation;
   Page previousPage;
+  bool memorySearch;
 };
 
 #endif  // WINDOWDATA_H

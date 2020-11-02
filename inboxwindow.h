@@ -2,8 +2,10 @@
 #define INBOXWINDOW_H
 
 #include <QWidget>
+#include "email.h"
 #include "emaildao.h"
 #include "list.h"
+#include "vector.h"
 #include "windowdata.h"
 
 namespace Ui {
@@ -24,11 +26,15 @@ class InboxWindow : public QWidget {
  private:
   void openEmail(long long id, const WindowData::Operation operation);
 
+  void loadInboxToMemory();
+
   void searchById(const long long id);
   void searchBySender(const char* sender);
+  void searchBySenderInFile(const char* sender);
+  void searchBySenderInMemory(const char* sender);
 
   void clearEmailTable();
-  void populateEmailTable(List<Email> emailList);
+  void populateEmailTable();
 
   // Pseudo Slots
  private:
@@ -47,6 +53,9 @@ class InboxWindow : public QWidget {
 
  private:
   Ui::InboxWindow* ui;
+
+  List<Email> searchResults;
+  Vector<Email> inbox;
 };
 
 #endif // INBOXWINDOW_H
