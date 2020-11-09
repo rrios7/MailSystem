@@ -2,12 +2,9 @@
 #define INBOXWINDOW_H
 
 #include <QWidget>
-#include "avltree.h"
 #include "email.h"
 #include "emaildao.h"
 #include "list.h"
-#include "primaryindex.h"
-#include "vector.h"
 #include "windowdata.h"
 
 namespace Ui {
@@ -27,8 +24,6 @@ class InboxWindow : public QWidget {
   // Class Methods
  private:
   void openEmail(long long id, const WindowData::Operation operation);
-
-  void loadInboxToMemory();
 
   void searchById(const long long id);
   void searchByIdInFile(const long long id);
@@ -58,10 +53,7 @@ class InboxWindow : public QWidget {
 
  private:
   Ui::InboxWindow* ui;
-
   List<Email> searchResults;
-  Vector<Email> vectorInbox;
-  AVLTree<PrimaryIndex> avlInbox;
 };
 
 #endif // INBOXWINDOW_H

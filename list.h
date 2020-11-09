@@ -127,9 +127,9 @@ class List {
   reference front() { return *m_Head->getNext()->getDataPtr(); }
   reference back() { return *m_Head->getPrev()->getDataPtr(); }
 
-  size_t length() { return m_Length; }
+  size_t length() const { return m_Length; }
 
-  bool empty() { return m_Head->getNext() == m_Head; }
+  bool empty() const { return m_Head->getNext() == m_Head; }
 
   iterator find(const_reference elem) {
     if (empty())

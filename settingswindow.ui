@@ -55,7 +55,6 @@ QCheckBox::indicator:hover {
 QCheckBox::indicator:checked {
    border: 2px solid rgb(13, 122, 242);
 	background: rgb(61, 149, 245);
-	background-position: center;
 	background-image: url(:/icons/checked.png);
 }
 
@@ -72,7 +71,6 @@ QRadioButton::indicator:hover {
 QRadioButton::indicator:checked {
 	border: 2px solid rgb(13, 122, 242);
     background: rgb(61, 149, 245);
-	background-position: center;
 	background-image: url(:/icons/checked.png);
 }</string>
   </property>

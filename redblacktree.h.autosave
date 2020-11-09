@@ -1,0 +1,73 @@
+#ifndef REDBLACKTREE_H
+#define REDBLACKTREE_H
+
+#include <iterator>
+
+template <typename T>
+class RedBlackTree {
+ public:
+  class RedBlackTreeNode {
+   public:
+    using value_type = T;
+    using pointer = value_type*;
+    using reference = value_type&;
+    using const_reference = const value_type&;
+    using node_pointer = RedBlackTreeNode*;
+    using color = bool;
+
+   public:
+    RedBlackTreeNode()
+        : m_Ptr{nullptr}, m_Left{nullptr}, m_Right{nullptr}, m_Size{1} {}
+
+    RedBlackTreeNode(const_reference elem)
+        : m_Ptr{new value_type{elem}},
+          m_Left{nullptr},
+          m_Right{nullptr},
+          m_Size{1} {}
+
+    value_type getData() const { return *m_Ptr; }
+    void setData(const_reference elem) { *m_Ptr = elem; }
+
+    pointer getDataPtr() const { return m_Ptr; }
+    void setDataPtr(pointer ptr) { m_Ptr = ptr; }
+
+    node_pointer getLeft() const { return m_Left; }
+    void setLeft(const node_pointer& ptr) { m_Left = ptr; }
+
+    node_pointer getRight() const { return m_Right; }
+    void setRight(const node_pointer& ptr) { m_Right = ptr; }
+
+    size_t getSize() const { return m_Size; }
+
+    color getColor() const { return m_Color; }
+    void setColor(const color color) { m_Color = color; }
+
+   private:
+    pointer m_Ptr;
+    node_pointer m_Left;
+    node_pointer m_Right;
+    size_t m_Size;
+    color m_Color;
+  };
+
+ public:
+  using value_type = T;
+  using reference = value_type&;
+  using const_reference = const value_type&;
+  using node = RedBlackTreeNode;
+  using node_pointer = node*;
+
+ public:
+  size_t length() const { return m_Root.getSize(); }
+  size_t length(const node& x) const { return x.getSize(); }
+  
+  bool contains(const value_type& elem) { return get(elem); }
+  
+  bool empty() const { return length() == 0; }
+
+ private:
+  const bool red = true;
+  const bool black = false;
+  node m_Root;
+};
+#endif // REDBLACKTREE_H

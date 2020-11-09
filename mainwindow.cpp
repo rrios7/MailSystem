@@ -22,6 +22,7 @@ MainWindow::MainWindow(QWidget* parent)
   connect(emailWindow, &EmailWindow::writeBackupEmail, this,
           [&]() { backupWindow->writeEmail(); });
   connect(backupWindow, &BackupWindow::showPage, this, &MainWindow::showPage);
+  WindowData::getInstance();
 }
 
 MainWindow::~MainWindow() {

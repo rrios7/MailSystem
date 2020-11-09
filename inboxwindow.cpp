@@ -22,7 +22,7 @@ InboxWindow::~InboxWindow()
 // Class Methods
 void InboxWindow::writeEmail() {
   EmailDAO::getInstance().write(WindowData::getInstance().getEmail());
-  loadInboxToMemory();
+  WindowData::getInstance().addToIndex();
 }
 
 void InboxWindow::openEmail(long long id,
@@ -31,27 +31,6 @@ void InboxWindow::openEmail(long long id,
   data.setOperation(operation);
   data.getEmail() = EmailDAO::getInstance().read(id);
   emit showPage(WindowData::EmailPage);
-}
-
-void InboxWindow::loadInboxToMemory() {
-  EmailDAO& db = EmailDAO::getInstance();
-  long long id = 0;
-  Email email = db.read(id);
-
-  while (db.next()) {
-    if (email.getId() == id && Tools::isValidEmail(email.getSender())) {
-      if (WindowData::getInstance().isMemorySearchEnabled())
-        vectorInbox.pushBack(email);
-      if (WindowData::getInstance().getPrimaryIndexTree() == WindowData::AVL)
-        avlInbox.insertData(PrimaryIndex{
-            email.getId(),
-            email.getId() * static_cast<long long>(sizeof(email))});
-    }
-    email = db.read(++id);
-  }
-
-  if (WindowData::getInstance().isMemorySearchEnabled())
-    vectorInbox.sort();
 }
 
 void InboxWindow::searchById(const long long id) {
@@ -78,13 +57,12 @@ void InboxWindow::searchByIdInFile(const long long id) {
 }
 
 void InboxWindow::searchByIdInAVL(const long long id) {
-  if (avlInbox.isEmpty())
-    loadInboxToMemory();
+  WindowData& data = WindowData::getInstance();
 
-  qDebug() << "Altura del AVL: " << avlInbox.getHeight();
+  qDebug() << "Altura del AVL: " << data.avlPrimaryIndex.getHeight();
 
   PrimaryIndex query{id};
-  auto result = avlInbox.findData(query);
+  auto result = data.avlPrimaryIndex.findData(query);
   if (result != nullptr)
     searchResults.pushBack(
         EmailDAO::getInstance().read(result->getData().getId()));
@@ -122,24 +100,26 @@ void InboxWindow::searchBySenderInFile(const char* sender) {
 }
 
 void InboxWindow::searchBySenderInMemory(const char* sender) {
-  if (vectorInbox.empty())
-    loadInboxToMemory();
+  WindowData& data = WindowData::getInstance();
+
+  if (data.vectorInbox.empty())
+    data.loadInboxToMemory();
 
   Email query;
   query.setSender(sender);
 
-  int pos = vectorInbox.binarySearch(query);
+  int pos = data.vectorInbox.binarySearch(query);
 
   if (pos == -1)
     return;
 
   while (pos - 1 >= 0 &&
-         Tools::equalEmails(vectorInbox[pos - 1].getSender(), sender))
+         Tools::equalEmails(data.vectorInbox[pos - 1].getSender(), sender))
     --pos;
 
-  while (pos < vectorInbox.length() &&
-         Tools::equalEmails(vectorInbox[pos].getSender(), sender))
-    searchResults.pushBack(vectorInbox[pos++]);
+  while (pos < data.vectorInbox.length() &&
+         Tools::equalEmails(data.vectorInbox[pos].getSender(), sender))
+    searchResults.pushBack(data.vectorInbox[pos++]);
 }
 
 void InboxWindow::clearEmailTable() {
@@ -232,9 +212,10 @@ void InboxWindow::onDeleteButtonClicked() {
 
   Email email{id};
   EmailDAO::getInstance().write(email);
+  WindowData::getInstance().setEmail(email);
+  WindowData::getInstance().removeFromIndex();
   MessageBox::display("Email deleted successfully");
   clearEmailTable();
-  loadInboxToMemory();
 }
 
 long long InboxWindow::getClickedId() {
