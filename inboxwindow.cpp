@@ -2,6 +2,7 @@
 #include "ui_inboxwindow.h"
 
 #include <QDebug>
+#include "advancedsearch.h"
 #include "emaildao.h"
 #include "emailwindow.h"
 #include "messagebox.h"
@@ -36,8 +37,8 @@ void InboxWindow::openEmail(long long id,
 void InboxWindow::searchById(const long long id) {
   searchResults.clear();
 
-  if (WindowData::getInstance().getPrimaryIndexTree() == WindowData::AVL)
-    searchByIdInAVL(id);
+  if (WindowData::getInstance().getIndexTree() == WindowData::AVL)
+    searchByIdInTree(id);
   else
     searchByIdInFile(id);
 
@@ -56,13 +57,13 @@ void InboxWindow::searchByIdInFile(const long long id) {
     searchResults.pushBack(email);
 }
 
-void InboxWindow::searchByIdInAVL(const long long id) {
+void InboxWindow::searchByIdInTree(const long long id) {
   WindowData& data = WindowData::getInstance();
 
-  qDebug() << "Altura del AVL: " << data.avlPrimaryIndex.getHeight();
+  qDebug() << "Primary Index Tree Height: " << data.primaryIndex.getHeight();
 
-  PrimaryIndex query{id};
-  auto result = data.avlPrimaryIndex.findData(query);
+  PrimaryIndexEntry query{id};
+  auto result = data.primaryIndex.findData(query);
   if (result != nullptr)
     searchResults.pushBack(
         EmailDAO::getInstance().read(result->getData().getId()));
@@ -70,10 +71,15 @@ void InboxWindow::searchByIdInAVL(const long long id) {
 
 void InboxWindow::searchBySender(const char* sender) {
   searchResults.clear();
+  WindowData& data = WindowData::getInstance();
 
-  if (WindowData::getInstance().isMemorySearchEnabled())
+  if (data.isMemorySearchEnabled())
     searchBySenderInMemory(sender);
-  else
+  else if (data.getIndexTree() == WindowData::AVL) {
+    auto result = searchByEmailInTree(sender, data.senderSecondaryIndex);
+    for (auto id : result)
+      searchByIdInTree(id);
+  } else
     searchBySenderInFile(sender);
 
   if (searchResults.empty()) {
@@ -117,9 +123,26 @@ void InboxWindow::searchBySenderInMemory(const char* sender) {
          Tools::equalEmails(data.vectorInbox[pos - 1].getSender(), sender))
     --pos;
 
-  while (pos < data.vectorInbox.length() &&
+  while (pos < static_cast<int>(data.vectorInbox.length()) &&
          Tools::equalEmails(data.vectorInbox[pos].getSender(), sender))
     searchResults.pushBack(data.vectorInbox[pos++]);
+}
+
+List<long long> InboxWindow::searchByEmailInTree(
+    const char* email,
+    AVLTree<SecondaryIndexEntry>& tree) {
+  qDebug() << "Email Secondary Index Tree Height:  " << tree.getHeight();
+
+  List<long long> queryResults;
+
+  SecondaryIndexEntry query{email};
+  auto result = tree.findData(query);
+
+  if (result != nullptr)
+    for (long long id : result->getData().getReferenceList())
+      queryResults.pushBack(id);
+
+  return queryResults;
 }
 
 void InboxWindow::clearEmailTable() {
@@ -136,6 +159,7 @@ void InboxWindow::populateEmailTable() {
     QWidget* widget = new QWidget();
     QTableWidgetItem* id = new QTableWidgetItem(QString::number(email.getId()));
     QTableWidgetItem* sender = new QTableWidgetItem(email.getSender());
+    QTableWidgetItem* receiver = new QTableWidgetItem(email.getReceiver());
     QTableWidgetItem* subject = new QTableWidgetItem(email.getSubject());
 
     QPushButton* readButton = new QPushButton();
@@ -180,8 +204,9 @@ void InboxWindow::populateEmailTable() {
     widget->setLayout(layout);
     ui->mailTableWidget->setItem(row, 0, id);
     ui->mailTableWidget->setItem(row, 1, sender);
-    ui->mailTableWidget->setItem(row, 2, subject);
-    ui->mailTableWidget->setCellWidget(row, 3, widget);
+    ui->mailTableWidget->setItem(row, 2, receiver);
+    ui->mailTableWidget->setItem(row, 3, subject);
+    ui->mailTableWidget->setCellWidget(row, 4, widget);
     ++row;
   }
 
@@ -257,4 +282,89 @@ void InboxWindow::on_searchButton_clicked() {
 void InboxWindow::on_newEmailButton_clicked() {
   WindowData::getInstance().setOperation(WindowData::Write);
   emit showPage(WindowData::EmailPage);
+}
+
+void InboxWindow::on_advancedSearchButton_clicked() {
+  WindowData& data = WindowData::getInstance();
+
+  if (data.getIndexTree() == WindowData::NoTree) {
+    MessageBox::display(
+        "Enable Searching by Index in order to use advanced search");
+    return;
+  }
+
+  QString sender, receiver;
+  int searchType = 0;
+  AdvancedSearch advSearch{sender, receiver, searchType};
+  advSearch.exec();
+
+  searchResults.clear();
+
+  List<long long> queryResults;
+  if (searchType == 0) {
+    if (!sender.isEmpty())
+      queryResults = searchByEmailInTree(sender.toStdString().c_str(),
+                                         data.senderSecondaryIndex);
+    else
+      queryResults = searchByEmailInTree(receiver.toStdString().c_str(),
+                                         data.receiverSecondaryIndex);
+  } else {
+    List<long long> a = searchByEmailInTree(sender.toStdString().c_str(),
+                                            data.senderSecondaryIndex);
+    List<long long> b = searchByEmailInTree(receiver.toStdString().c_str(),
+                                            data.receiverSecondaryIndex);
+    auto aPointer = a.begin();
+    auto bPointer = b.begin();
+
+    // AND SEARCH
+    if (searchType == 1) {
+      while (aPointer != a.end() && bPointer != b.end()) {
+        qDebug() << "A: " << *aPointer;
+        qDebug() << "B: " << *bPointer;
+
+        if (*aPointer == *bPointer) {
+          queryResults.pushBack(*aPointer);
+          ++aPointer;
+          ++bPointer;
+        } else if (*aPointer < *bPointer)
+          ++aPointer;
+        else
+          ++bPointer;
+      }
+    } else {
+      // OR SEARCH
+      while (aPointer != a.end() && bPointer != b.end()) {
+        qDebug() << "A: " << *aPointer;
+        qDebug() << "B: " << *bPointer;
+
+        queryResults.pushBack(*aPointer);
+
+        if (*aPointer == *bPointer) {
+          ++aPointer;
+          ++bPointer;
+        } else
+          ++aPointer;
+      }
+
+      while (aPointer != a.end()) {
+        queryResults.pushBack(*aPointer);
+        ++aPointer;
+      }
+
+      while (bPointer != b.end()) {
+        queryResults.pushBack(*bPointer);
+        ++bPointer;
+      }
+    }
+  }
+
+  if (queryResults.empty()) {
+    MessageBox::display("No results found");
+    return;
+  }
+
+  for (auto id : queryResults)
+    searchByIdInTree(id);
+
+  populateEmailTable();
 }

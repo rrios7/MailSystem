@@ -295,6 +295,7 @@ void AVLTree<T>::deleteData(Node*& r) {
     r = nullptr;
     return;
   }
+
   Node*& posSust(r->getLeft() != nullptr ? posSust = getHighest(r->getLeft())
                                          : posSust = getLowest(r->getRight()));
   r->setData(posSust->getData());

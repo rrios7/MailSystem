@@ -14,9 +14,9 @@ SettingsWindow::~SettingsWindow() {
 void SettingsWindow::on_primaryIndexAVLButton_clicked() {
   WindowData& data = WindowData::getInstance();
   if (ui->primaryIndexAVLButton->isChecked())
-    data.setPrimaryIndexTree(WindowData::AVL);
+    data.setIndexTree(WindowData::AVL);
   else
-    data.setPrimaryIndexTree(WindowData::NoTree);
+    data.setIndexTree(WindowData::NoTree);
 }
 
 void SettingsWindow::on_memorySearchCheckBox_clicked() {

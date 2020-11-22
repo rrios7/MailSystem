@@ -7,8 +7,7 @@ namespace Ui {
 class MessageBox;
 }
 
-class MessageBox : public QDialog
-{
+class MessageBox : public QDialog {
   Q_OBJECT
  public:
   explicit MessageBox(QWidget* parent = nullptr,
@@ -19,7 +18,7 @@ class MessageBox : public QDialog
   static int question(const QString& msg);
 
  private:
-  Ui::MessageBox *ui;
+  Ui::MessageBox* ui;
 };
 
-#endif // MESSAGEBOX_H
+#endif  // MESSAGEBOX_H

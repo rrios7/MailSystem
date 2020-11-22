@@ -150,7 +150,7 @@ QRadioButton::indicator:checked {
          </font>
         </property>
         <property name="text">
-         <string>Enable Primary Index Search</string>
+         <string>Enable Index Search</string>
         </property>
         <property name="margin">
          <number>0</number>

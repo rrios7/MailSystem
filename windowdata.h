@@ -6,7 +6,8 @@
 #include "avltree.h"
 #include "email.h"
 #include "emaildao.h"
-#include "primaryindex.h"
+#include "primaryindexentry.h"
+#include "secondaryindexentry.h"
 #include "tools.h"
 #include "vector.h"
 
@@ -18,43 +19,41 @@ class WindowData {
   }
 
  private:
-  WindowData() : memorySearch{false}, primaryIndexTree{NoTree} {
-    std::fstream primaryIndex{primaryIndexFileName,
-                              std::ios::in | std::ios::binary};
+  WindowData() : memorySearch{false}, indexTree{NoTree} {
+    std::fstream file{primaryIndexFileName, std::ios::in | std::ios::binary};
     // If Index is not yet made
-    if (!primaryIndex.is_open()) {
-      primaryIndex.open(primaryIndexFileName, std::ios::out | std::ios::binary);
+    if (!file.is_open()) {
+      file.open(primaryIndexFileName, std::ios::out | std::ios::binary);
       // Index Update Flag
       bool needsUpdating = true;
-      primaryIndex.write(reinterpret_cast<char*>(&needsUpdating), sizeof(bool));
+      file.write(reinterpret_cast<char*>(&needsUpdating), sizeof(bool));
     }
-    primaryIndex.close();
+    file.close();
     loadPrimaryIndex();
+    loadSecondaryIndex();
   }
 
   ~WindowData() { savePrimaryIndex(); }
 
   void savePrimaryIndex() {
-    std::fstream primaryIndex{primaryIndexFileName,
-                              std::ios::in | std::ios::binary};
+    std::fstream file{primaryIndexFileName, std::ios::in | std::ios::binary};
     bool needsUpdating;
-    primaryIndex.read(reinterpret_cast<char*>(&needsUpdating), sizeof(bool));
-    primaryIndex.close();
+    file.read(reinterpret_cast<char*>(&needsUpdating), sizeof(bool));
+    file.close();
 
     if (needsUpdating) {
-      primaryIndex.open(primaryIndexFileName, std::ios::out | std::ios::binary);
+      file.open(primaryIndexFileName, std::ios::out | std::ios::binary);
       needsUpdating = false;
-      primaryIndex.write(reinterpret_cast<char*>(&needsUpdating), sizeof(bool));
-      avlPrimaryIndex.parseInOrder(primaryIndex);
-      primaryIndex.close();
+      file.write(reinterpret_cast<char*>(&needsUpdating), sizeof(bool));
+      primaryIndex.parseInOrder(file);
+      file.close();
     }
   }
 
   void loadPrimaryIndex() {
-    std::fstream primaryIndex{primaryIndexFileName,
-                              std::ios::in | std::ios::binary};
+    std::fstream file{primaryIndexFileName, std::ios::in | std::ios::binary};
     bool needsUpdating;
-    primaryIndex.read(reinterpret_cast<char*>(&needsUpdating), sizeof(bool));
+    file.read(reinterpret_cast<char*>(&needsUpdating), sizeof(bool));
 
     qDebug() << (needsUpdating ? "Primary index needs to be updated"
                                : "Primary index is up to date");
@@ -64,15 +63,15 @@ class WindowData {
       return;
     }
 
-    while (!primaryIndex.eof()) {
-      PrimaryIndex index;
-      primaryIndex.read(reinterpret_cast<char*>(&index), sizeof(index));
-      if (primaryIndex.fail())
+    while (!file.eof()) {
+      PrimaryIndexEntry entry;
+      file.read(reinterpret_cast<char*>(&entry), sizeof(entry));
+      if (file.fail())
         break;
-      avlPrimaryIndex.insertData(index);
+      primaryIndex.insertData(entry);
     }
 
-    primaryIndex.close();
+    file.close();
   }
 
   void createPrimaryIndex() {
@@ -82,11 +81,47 @@ class WindowData {
 
     while (db.next()) {
       if (email.getId() == id && Tools::isValidEmail(email.getSender()))
-        avlPrimaryIndex.insertData(PrimaryIndex{
+        primaryIndex.insertData(PrimaryIndexEntry{
             email.getId(),
             email.getId() * static_cast<long long>(sizeof(email))});
       email = db.read(++id);
     }
+    savePrimaryIndex();
+  }
+
+  void loadSecondaryIndex() {
+    EmailDAO& db = EmailDAO::getInstance();
+
+    std::fstream file{primaryIndexFileName, std::ios::in | std::ios::binary};
+    bool needsUpdating;
+    file.read(reinterpret_cast<char*>(&needsUpdating), sizeof(bool));
+
+    while (!file.eof()) {
+      PrimaryIndexEntry entry;
+      file.read(reinterpret_cast<char*>(&entry), sizeof(entry));
+      if (file.fail())
+        break;
+
+      Email email = db.read(entry.getId());
+
+      addElementToInvertedList(senderSecondaryIndex, email.getSender(),
+                               email.getId());
+      addElementToInvertedList(receiverSecondaryIndex, email.getReceiver(),
+                               email.getId());
+    }
+
+    file.close();
+  }
+
+  void addElementToInvertedList(AVLTree<SecondaryIndexEntry>& tree,
+                                std::string email,
+                                long long id) {
+    auto invertedList = tree.findData(SecondaryIndexEntry{email});
+
+    if (invertedList != nullptr) {
+      invertedList->getData().getReferenceList().pushOrdered(id);
+    } else
+      tree.insertData(SecondaryIndexEntry{email, id});
   }
 
   void setUpdateFlag() {
@@ -119,8 +154,8 @@ class WindowData {
   bool isMemorySearchEnabled() const { return memorySearch; }
   void setMemorySearch(bool value) { memorySearch = value; }
 
-  Tree getPrimaryIndexTree() const { return primaryIndexTree; }
-  void setPrimaryIndexTree(const Tree& value) { primaryIndexTree = value; }
+  Tree getIndexTree() const { return indexTree; }
+  void setIndexTree(const Tree& value) { indexTree = value; }
 
   void loadInboxToMemory() {
     EmailDAO& db = EmailDAO::getInstance();
@@ -137,19 +172,21 @@ class WindowData {
 
   void addToIndex() {
     setUpdateFlag();
-    avlPrimaryIndex.insertData(PrimaryIndex{
+    primaryIndex.insertData(PrimaryIndexEntry{
         email.getId(), email.getId() * static_cast<long long>(sizeof(email))});
   }
 
   void removeFromIndex() {
     setUpdateFlag();
-    avlPrimaryIndex.deleteData(PrimaryIndex{email.getId()});
+    primaryIndex.deleteData(PrimaryIndexEntry{email.getId()});
   }
 
  public:
   // Primary & Secondary Index Data Structres
   Vector<Email> vectorInbox;
-  AVLTree<PrimaryIndex> avlPrimaryIndex;
+  AVLTree<PrimaryIndexEntry> primaryIndex;
+  AVLTree<SecondaryIndexEntry> senderSecondaryIndex;
+  AVLTree<SecondaryIndexEntry> receiverSecondaryIndex;
 
  private:
   // Window Data
@@ -157,7 +194,7 @@ class WindowData {
   Operation operation;
   Page previousPage;
   bool memorySearch;
-  Tree primaryIndexTree;
+  Tree indexTree;
 
   // Primary & Secondary Index File Names
   const std::string primaryIndexFileName = "primaryindex.dat";

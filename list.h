@@ -135,7 +135,7 @@ class List {
     if (empty())
       return end();
 
-    node_pointer aux(m_Head->getNext());
+    node_pointer aux{m_Head->getNext()};
 
     while (aux != m_Head) {
       if (aux->getData() == elem) {
@@ -148,6 +148,7 @@ class List {
     return end();
   }
 
+  void pushOrdered(const_reference elem) { insertOrdered(elem); }
   void pushBack(const_reference elem) { insert(m_Head->getPrev(), elem); }
   void popBack() { erase(m_Head->getPrev()); }
 
@@ -174,6 +175,18 @@ class List {
   }
 
  private:
+  void insertOrdered(const_reference elem) {
+    if (empty()) {
+      insert(m_Head, elem);
+      return;
+    }
+    node_pointer aux{m_Head};
+    while (aux->getNext() != m_Head && aux->getNext()->getData() < elem)
+      aux = aux->getNext();
+
+    insert(aux, elem);
+  }
+
   void insert(node_pointer ptr, const_reference elem) {
     node_pointer newNode{new node{elem}};
     newNode->setPrev(ptr);

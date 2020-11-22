@@ -16,6 +16,7 @@ DEFINES += QT_DEPRECATED_WARNINGS
 #DEFINES += QT_DISABLE_DEPRECATED_BEFORE=0x060000    # disables all the APIs deprecated before Qt 6.0.0
 
 SOURCES += \
+    advancedsearch.cpp \
     backupwindow.cpp \
     email.cpp \
     emailwindow.cpp \
@@ -23,11 +24,13 @@ SOURCES += \
     main.cpp \
     mainwindow.cpp \
     messagebox.cpp \
-    primaryindex.cpp \
+    primaryindexentry.cpp \
+    secondaryindexentry.cpp \
     settingswindow.cpp \
     tools.cpp
 
 HEADERS += \
+    advancedsearch.h \
     avltree.h \
     backupwindow.h \
     csv.h \
@@ -38,13 +41,15 @@ HEADERS += \
     list.h \
     mainwindow.h \
     messagebox.h \
-    primaryindex.h \
+    primaryindexentry.h \
+    secondaryindexentry.h \
     settingswindow.h \
     tools.h \
     vector.h \
     windowdata.h
 
 FORMS += \
+    advancedsearch.ui \
     backupwindow.ui \
     emailwindow.ui \
     inboxwindow.ui \

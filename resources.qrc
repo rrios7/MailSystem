@@ -14,5 +14,7 @@
         <file>icons/security.png</file>
         <file>icons/supervisor.png</file>
         <file>icons/checked.png</file>
+        <file>icons/advancedsearch.png</file>
+        <file>icons/cross.png</file>
     </qresource>
 </RCC>

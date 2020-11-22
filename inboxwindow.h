@@ -27,11 +27,14 @@ class InboxWindow : public QWidget {
 
   void searchById(const long long id);
   void searchByIdInFile(const long long id);
-  void searchByIdInAVL(const long long id);
+  void searchByIdInTree(const long long id);
 
   void searchBySender(const char* sender);
   void searchBySenderInFile(const char* sender);
   void searchBySenderInMemory(const char* sender);
+
+  List<long long> searchByEmailInTree(const char* email,
+                                      AVLTree<SecondaryIndexEntry>& tree);
 
   void clearEmailTable();
   void populateEmailTable();
@@ -47,6 +50,8 @@ class InboxWindow : public QWidget {
   void on_searchButton_clicked();
 
   void on_newEmailButton_clicked();
+
+  void on_advancedSearchButton_clicked();
 
  signals:
   void showPage(const WindowData::Page page);
