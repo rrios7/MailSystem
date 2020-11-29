@@ -28,6 +28,7 @@ class InboxWindow : public QWidget {
   void searchById(const long long id);
   void searchByIdInFile(const long long id);
   void searchByIdInTree(const long long id);
+  void searchByIdInPaginatedTree(const long long id);
 
   void searchBySender(const char* sender);
   void searchBySenderInFile(const char* sender);

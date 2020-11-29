@@ -6,6 +6,7 @@
 #include "avltree.h"
 #include "email.h"
 #include "emaildao.h"
+#include "paginatedavltree.h"
 #include "primaryindexentry.h"
 #include "secondaryindexentry.h"
 #include "tools.h"
@@ -45,7 +46,7 @@ class WindowData {
       file.open(primaryIndexFileName, std::ios::out | std::ios::binary);
       needsUpdating = false;
       file.write(reinterpret_cast<char*>(&needsUpdating), sizeof(bool));
-      primaryIndex.parseInOrder(file);
+      primaryIndex.inOrder(file);
       file.close();
     }
   }
@@ -68,7 +69,11 @@ class WindowData {
       file.read(reinterpret_cast<char*>(&entry), sizeof(entry));
       if (file.fail())
         break;
-      primaryIndex.insertData(entry);
+      primaryIndex.insert(entry);
+
+      if (paginatedPrimaryIndex.count() < paginatedPrimaryIndex.MAX_PAGES) {
+        paginatedPrimaryIndex.insert(entry);
+      }
     }
 
     file.close();
@@ -81,7 +86,7 @@ class WindowData {
 
     while (db.next()) {
       if (email.getId() == id && Tools::isValidEmail(email.getSender()))
-        primaryIndex.insertData(PrimaryIndexEntry{
+        primaryIndex.insert(PrimaryIndexEntry{
             email.getId(),
             email.getId() * static_cast<long long>(sizeof(email))});
       email = db.read(++id);
@@ -116,12 +121,12 @@ class WindowData {
   void addElementToInvertedList(AVLTree<SecondaryIndexEntry>& tree,
                                 std::string email,
                                 long long id) {
-    auto invertedList = tree.findData(SecondaryIndexEntry{email});
+    auto invertedList = tree.retrieve(SecondaryIndexEntry{email});
 
     if (invertedList != nullptr) {
-      invertedList->getData().getReferenceList().pushOrdered(id);
+      invertedList->getValue().getReferenceList().pushOrdered(id);
     } else
-      tree.insertData(SecondaryIndexEntry{email, id});
+      tree.insert(SecondaryIndexEntry{email, id});
   }
 
   void setUpdateFlag() {
@@ -139,7 +144,7 @@ class WindowData {
  public:
   enum Page { InboxPage = 0, EmailPage, BackupPage, SettingsPage };
   enum Operation { None = 0, Read, Write, Update, Delete };
-  enum Tree { NoTree = 0, AVL, RedBlack };
+  enum Tree { NoTree = 1 << 0, AVL = 1 << 1, Paginated = 1 << 2 };
 
  public:
   Email& getEmail() { return email; }
@@ -172,13 +177,14 @@ class WindowData {
 
   void addToIndex() {
     setUpdateFlag();
-    primaryIndex.insertData(PrimaryIndexEntry{
+    primaryIndex.insert(PrimaryIndexEntry{
         email.getId(), email.getId() * static_cast<long long>(sizeof(email))});
   }
 
   void removeFromIndex() {
     setUpdateFlag();
-    primaryIndex.deleteData(PrimaryIndexEntry{email.getId()});
+    primaryIndex.erase(PrimaryIndexEntry{email.getId()});
+    paginatedPrimaryIndex.erase(PrimaryIndexEntry{email.getId()});
   }
 
  public:
@@ -187,6 +193,7 @@ class WindowData {
   AVLTree<PrimaryIndexEntry> primaryIndex;
   AVLTree<SecondaryIndexEntry> senderSecondaryIndex;
   AVLTree<SecondaryIndexEntry> receiverSecondaryIndex;
+  PaginatedAVLTree<PrimaryIndexEntry> paginatedPrimaryIndex;
 
  private:
   // Window Data

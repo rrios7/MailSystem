@@ -41,6 +41,7 @@ HEADERS += \
     list.h \
     mainwindow.h \
     messagebox.h \
+    paginatedavltree.h \
     primaryindexentry.h \
     secondaryindexentry.h \
     settingswindow.h \

@@ -1,460 +1,231 @@
 #ifndef AVLTREE_H
 #define AVLTREE_H
 
-#include <exception>
 #include <iostream>
-#include <string>
 
-template <class T>
+template <typename T>
 class AVLTree {
- private:
-  class Node {
-   private:
-    T* dataPtr;
-    Node* right;
-    Node* left;
+  class AVLNode {
+   public:
+    using value_type = T;
+    using pointer = value_type*;
+    using reference = value_type&;
+    using const_reference = const value_type&;
+    using node_pointer = AVLNode*;
 
    public:
-    class Exception : public std::exception {
-     private:
-      std::string msg;
+    AVLNode(T value)
+        : m_BalanceFactor{0},
+          m_Height{0},
+          m_Value{value},
+          m_Left{nullptr},
+          m_Right{nullptr} {}
 
-     public:
-      explicit Exception(const char* message) : msg(message) {}
+    int getBalanceFactor() const { return m_BalanceFactor; }
+    void setBalanceFactor(const int balanceFactor) {
+      m_BalanceFactor = balanceFactor;
+    }
 
-      explicit Exception(const std::string& message) : msg(message) {}
+    int getHeight() const { return m_Height; }
+    void setHeight(const int height) { m_Height = height; }
 
-      virtual ~Exception() throw() {}
+    value_type getValue() const { return m_Value; }
+    reference getValue() { return m_Value; }
+    void setValue(const_reference value) { m_Value = value; }
 
-      virtual const char* what() const throw() { return msg.c_str(); }
-    };
+    node_pointer getLeft() { return m_Left; }
+    void setLeft(node_pointer ptr) { m_Left = ptr; }
 
-    Node();
-    Node(const T& e);
-    ~Node();
+    node_pointer getRight() { return m_Right; }
+    void setRight(node_pointer ptr) { m_Right = ptr; }
 
-    T* getDataPtr();
-    T& getData();
-    Node*& getRight();
-    Node*& getLeft();
-
-    void setDataPtr(T*);
-    void setData(const T&);
-    void setRight(Node* p);
-    void setLeft(Node* p);
+   private:
+    int m_BalanceFactor;
+    int m_Height;
+    value_type m_Value;
+    node_pointer m_Left;
+    node_pointer m_Right;
   };
-
-  Node* root;
-
-  void copyAll(AVLTree<T>&);
-
-  void insertData(Node*&, const T&);
-  Node*& findData(Node*&, const T&);
-  bool ifExistingElement(Node*&, const T&);
-  void deleteData(Node*&);
-  void copyAll(Node*&);
-  int getHeight(Node*&);
-  void deleteAll(Node*&);
-  void parsePreOrder(Node*&);
-  void parseInOrder(Node*&, std::ostream&);
-  void parsePostOrder(Node*&);
-
-  int getBalanceFactor(Node*&);
-  void simpleLeftRotation(Node*&);
-  void simpleRightRotation(Node*&);
-  void doubleLeftRotation(Node*&);
-  void doubleRightRotation(Node*&);
-  void doBalancing(Node*&);
 
  public:
-  class Exception : public std::exception {
-   private:
-    std::string msg;
+  using value_type = T;
+  using reference = value_type&;
+  using const_reference = const value_type&;
+  using node = AVLNode;
+  using node_pointer = node*;
 
-   public:
-    explicit Exception(const char* message) : msg(message) {}
+ public:
+  AVLTree() : m_Root{nullptr}, m_Count{0} {}
 
-    explicit Exception(const std::string& message) : msg(message) {}
+  bool empty() { return m_Root == nullptr; }
 
-    virtual ~Exception() throw() {}
+  int count() { return m_Count; }
 
-    virtual const char* what() const throw() { return msg.c_str(); }
-  };
+  int height() { return (m_Root == nullptr ? 0 : m_Root->getHeight()); }
 
-  AVLTree();
-  AVLTree(const AVLTree&);
-  ~AVLTree();
+  bool contains(const_reference value) {
+    return retrieve(m_Root, value) != nullptr;
+  }
 
-  bool isEmpty() const;
-  void insertData(const T&);
-  bool isLeaf(Node*&);
-  Node*& getLowest(Node*&);
-  Node*& getHighest(Node*&);
-  Node*& findData(const T&);
-  bool ifExistingElement(const T&);
-  void deleteData(const T&);
-  T& retrieve(Node*&);
-  int getHeight();
-  void deleteAll();
+  node_pointer retrieve(const_reference value) {
+    return retrieve(m_Root, value);
+  }
 
-  Node*& getRoot();
+  void insert(const_reference value) {
+    m_Root = insert(m_Root, value);
+    ++m_Count;
+  }
 
-  int getHeightNode(Node*&);
+  void erase(const_reference value) {
+    if (contains(value)) {
+      m_Root = erase(m_Root, value);
+      --m_Count;
+    }
+  }
+  void inOrder(std::ostream& out) { inOrderUtil(m_Root, out); }
 
-  void parsePreOrder();
-  void parseInOrder(std::ostream& out);
-  void parsePostOrder();
+ private:
+  node_pointer retrieve(node_pointer root, const_reference value) {
+    if (root == nullptr || root->getValue() == value)
+      return root;
 
-  AVLTree& operator=(const AVLTree&);
+    if (value < root->getValue())
+      return retrieve(root->getLeft(), value);
+
+    return retrieve(root->getRight(), value);
+  }
+
+  node_pointer insert(node_pointer root, const_reference value) {
+    if (root == nullptr) {
+      root = new node(value);
+      return root;
+    }
+
+    if (value < root->getValue())
+      root->setLeft(insert(root->getLeft(), value));
+    else
+      root->setRight(insert(root->getRight(), value));
+
+    update(root);
+
+    return balance(root);
+  }
+
+  void update(node_pointer root) {
+    int leftHeight = (root->getLeft() ? root->getLeft()->getHeight() : -1);
+    int rightHeight = (root->getRight() ? root->getRight()->getHeight() : -1);
+    root->setHeight(std::max(leftHeight, rightHeight) + 1);
+    root->setBalanceFactor(rightHeight - leftHeight);
+  }
+
+  node_pointer balance(node_pointer root) {
+    if (root->getBalanceFactor() == -2) {
+      if (root->getLeft()->getBalanceFactor() <= 0)
+        return leftLeftCase(root);
+      else
+        return leftRightCase(root);
+    } else if (root->getBalanceFactor() == 2) {
+      if (root->getRight()->getBalanceFactor() >= 0)
+        return rightRightCase(root);
+      else
+        return rightLeftCase(root);
+    }
+
+    return root;
+  }
+
+  node_pointer leftLeftCase(node_pointer root) { return rightRotation(root); }
+
+  node_pointer leftRightCase(node_pointer root) {
+    root->setLeft(leftRotation(root->getLeft()));
+    return leftLeftCase(root);
+  }
+
+  node_pointer rightRightCase(node_pointer root) { return leftRotation(root); }
+
+  node_pointer rightLeftCase(node_pointer root) {
+    root->setRight(rightRotation(root->getRight()));
+    return rightRightCase(root);
+  }
+
+  node_pointer leftRotation(node_pointer root) {
+    node_pointer newParent{root->getRight()};
+    root->setRight(newParent->getLeft());
+    newParent->setLeft(root);
+    update(root);
+    update(newParent);
+    return newParent;
+  }
+
+  node_pointer rightRotation(node_pointer root) {
+    node_pointer newParent{root->getLeft()};
+    root->setLeft(newParent->getRight());
+    newParent->setRight(root);
+    update(root);
+    update(newParent);
+    return newParent;
+  }
+
+  node_pointer erase(node_pointer root, const_reference value) {
+    if (root == nullptr)
+      return nullptr;
+
+    if (value == root->getValue()) {
+      if (root->getLeft() == nullptr) {
+        node_pointer rightChild{root->getRight()};
+        delete root;
+        return rightChild;
+      } else if (root->getRight() == nullptr) {
+        node_pointer leftChild{root->getLeft()};
+        delete root;
+        return leftChild;
+      } else {
+        if (root->getLeft()->getHeight() > root->getRight()->getHeight()) {
+          value_type successorValue = findMax(root->getLeft());
+          root->setValue(successorValue);
+          root->setLeft(erase(root->getLeft(), successorValue));
+        } else {
+          value_type successorValue = findMin(root->getRight());
+          root->setValue(successorValue);
+          root->setRight(erase(root->getRight(), successorValue));
+        }
+      }
+    } else if (value < root->getValue())
+      root->setLeft(erase(root->getLeft(), value));
+    else
+      root->setRight(erase(root->getRight(), value));
+
+    update(root);
+
+    return balance(root);
+  }
+
+  value_type findMin(node_pointer root) {
+    while (root->getLeft() != nullptr)
+      root = root->getLeft();
+
+    return root->getValue();
+  }
+
+  value_type findMax(node_pointer root) {
+    while (root->getRight() != nullptr)
+      root = root->getRight();
+
+    return root->getValue();
+  }
+
+  void inOrderUtil(node_pointer root, std::ostream& out) {
+    if (root == nullptr)
+      return;
+
+    inOrderUtil(root->getLeft(), out);
+    out.write(reinterpret_cast<char*>(&root->getValue()), sizeof(value_type));
+    inOrderUtil(root->getRight(), out);
+  }
+
+ private:
+  node_pointer m_Root;
+  int m_Count;
 };
-
-template <class T>
-AVLTree<T>::Node::Node() : dataPtr(nullptr), left(nullptr), right(nullptr) {}
-
-template <class T>
-AVLTree<T>::Node::Node(const T& e)
-    : dataPtr(new T(e)), right(nullptr), left(nullptr) {
-  if (dataPtr == nullptr) {
-    throw Exception("Memoria no disponible, constructor del Nodo");
-  }
-}
-
-template <class T>
-AVLTree<T>::Node::~Node() {
-  delete dataPtr;
-}
-
-template <class T>
-T* AVLTree<T>::Node::getDataPtr() {
-  return dataPtr;
-}
-
-template <class T>
-T& AVLTree<T>::Node::getData() {
-  if (dataPtr == nullptr) {
-    throw Exception("Dato no disponible, Nodo-getData");
-  }
-  return *dataPtr;
-}
-
-template <class T>
-typename AVLTree<T>::Node*& AVLTree<T>::Node::getRight() {
-  return right;
-}
-
-template <class T>
-typename AVLTree<T>::Node*& AVLTree<T>::Node::getLeft() {
-  return left;
-}
-
-template <class T>
-void AVLTree<T>::Node::setDataPtr(T* p) {
-  dataPtr = p;
-}
-
-template <class T>
-void AVLTree<T>::Node::setData(const T& e) {
-  if (dataPtr == nullptr) {
-    if ((dataPtr = new T(e)) == nullptr) {
-      throw Exception("Memoria no disponible, Node::setData");
-    }
-  } else {
-    *dataPtr = e;
-  }
-}
-
-template <class T>
-void AVLTree<T>::Node::setLeft(Node* p) {
-  left = p;
-}
-
-template <class T>
-void AVLTree<T>::Node::setRight(Node* p) {
-  right = p;
-}
-
-template <class T>
-bool AVLTree<T>::ifExistingElement(Node*& r, const T& e) {
-  if (r->getData() == e) {
-    return true;
-  } else if (r == nullptr) {
-    return false;
-  } else if (e < r->getData()) {
-    return findData(r->getLeft(), e);
-  } else {
-    return findData(r->getRight(), e);
-  }
-}
-
-template <class T>
-bool AVLTree<T>::ifExistingElement(const T& e) {
-  return ifExistingElement(root, e);
-}
-
-template <class T>
-AVLTree<T>::AVLTree() : root(nullptr) {}
-
-template <class T>
-AVLTree<T>::AVLTree(const AVLTree& bt) : root(nullptr) {
-  deleteAll();
-  copyAll(bt);
-}
-
-template <class T>
-AVLTree<T>::~AVLTree() {
-  deleteAll();
-}
-
-template <class T>
-typename AVLTree<T>::Node*& AVLTree<T>::getRoot() {
-  return root;
-}
-
-template <class T>
-bool AVLTree<T>::isEmpty() const {
-  return root = nullptr;
-}
-
-template <class T>
-void AVLTree<T>::insertData(const T& e) {
-  insertData(root, e);
-}
-
-template <class T>
-void AVLTree<T>::insertData(Node*& r, const T& e) {
-  if (r == nullptr) {
-    try {
-      if ((r = new Node(e)) == nullptr) {
-        throw Exception("Memoria no disponible, insertData");
-      }
-    } catch (typename Node::Exception ex) {
-      throw Exception(ex.what());
-    }
-  } else {
-    if (e < r->getData()) {
-      insertData(r->getLeft(), e);
-    } else {
-      insertData(r->getRight(), e);
-    }
-    doBalancing(r);
-  }
-}
-
-template <class T>
-bool AVLTree<T>::isLeaf(Node*& r) {
-  if (r == nullptr) {
-    return false;
-  }
-  return r != nullptr and r->getLeft() == r->getRight();
-}
-
-template <class T>
-typename AVLTree<T>::Node*& AVLTree<T>::getLowest(Node*& r) {
-  if (r == nullptr or r->getLeft() == nullptr) {
-    return r;
-  }
-  return getLowest(r->getLeft());
-}
-
-template <class T>
-typename AVLTree<T>::Node*& AVLTree<T>::getHighest(Node*& r) {
-  if (r == nullptr or r->getRight() == nullptr) {
-    return r;
-  }
-  return getHighest(r->getRight());
-}
-
-template <class T>
-typename AVLTree<T>::Node*& AVLTree<T>::findData(const T& e) {
-  return findData(root, e);
-}
-
-template <class T>
-typename AVLTree<T>::Node*& AVLTree<T>::findData(Node*& r, const T& e) {
-  if (r == nullptr or r->getData() == e) {
-    return r;
-  }
-  if (e < r->getData()) {
-    return findData(r->getLeft(), e);
-  }
-  return findData(r->getRight(), e);
-}
-
-template <class T>
-void AVLTree<T>::deleteData(const T& e) {
-  deleteData(findData(e));
-}
-
-template <class T>
-void AVLTree<T>::deleteData(Node*& r) {
-  if (r == nullptr) {
-    throw Exception("Insuficiencia de datos");
-  }
-  if (isLeaf(r)) {
-    delete r;
-    r = nullptr;
-    return;
-  }
-
-  Node*& posSust(r->getLeft() != nullptr ? posSust = getHighest(r->getLeft())
-                                         : posSust = getLowest(r->getRight()));
-  r->setData(posSust->getData());
-  deleteData(posSust);
-}
-
-template <class T>
-T& AVLTree<T>::retrieve(Node*& r) {
-  return r->getData();
-}
-
-template <class T>
-int AVLTree<T>::getHeight() {
-  return getHeight(root);
-}
-
-template <class T>
-int AVLTree<T>::getHeight(Node*& r) {
-  if (r == nullptr) {
-    return 0;
-  }
-  if (isLeaf(r)) {
-    return 1;
-  }
-  int lH(getHeight(r->getLeft()));
-  int rH(getHeight(r->getRight()));
-
-  return 1 + (lH > rH ? lH : rH);
-}
-
-template <class T>
-int AVLTree<T>::getHeightNode(Node*& r) {
-  return getHeight(r);
-}
-
-template <class T>
-void AVLTree<T>::deleteAll() {
-  deleteAll(root);
-}
-
-template <class T>
-void AVLTree<T>::deleteAll(Node*& r) {
-  if (r == nullptr) {
-    return;
-  }
-  deleteAll(r->getLeft());
-  deleteAll(r->getRight());
-  delete r;
-  r = nullptr;
-}
-
-template <class T>
-void AVLTree<T>::parsePreOrder() {
-  return parsePreOrder(root);
-}
-
-template <class T>
-void AVLTree<T>::parsePreOrder(Node*& r) {
-  if (r == nullptr) {
-    return;
-  }
-
-  std::cout << r->getData() << " | ";
-  parsePreOrder(r->getLeft());
-  parsePreOrder(r->getRight());
-}
-
-template <class T>
-void AVLTree<T>::parseInOrder(std::ostream& out) {
-  parseInOrder(root, out);
-}
-
-template <class T>
-void AVLTree<T>::parseInOrder(Node*& r, std::ostream& out) {
-  if (r == nullptr) {
-    return;
-  }
-  parseInOrder(r->getLeft(), out);
-  out.write(reinterpret_cast<char*>(&r->getData()), sizeof(T));
-  parseInOrder(r->getRight(), out);
-}
-
-template <class T>
-void AVLTree<T>::parsePostOrder() {
-  parsePostOrder(root);
-}
-
-template <class T>
-void AVLTree<T>::parsePostOrder(Node*& r) {
-  if (r == nullptr) {
-    return;
-  }
-  parsePostOrder(r->getLeft());
-  parsePostOrder(r->getRight());
-  std::cout << r->getData() << " | ";
-}
-
-template <class T>
-AVLTree<T>& AVLTree<T>::operator=(const AVLTree& t) {
-  deleteAll();
-  copyAll(t);
-  return *this;
-}
-
-template <class T>
-int AVLTree<T>::getBalanceFactor(Node*& r) {
-  return getHeight(r->getRight()) - getHeight(r->getLeft());
-}
-
-template <class T>
-void AVLTree<T>::simpleLeftRotation(Node*& r) {
-  Node* aux1(r->getRight());
-  Node* aux2(aux1->getLeft());
-
-  r->setRight(aux2);
-  aux1->setLeft(r);
-  r = aux1;
-}
-
-template <class T>
-void AVLTree<T>::simpleRightRotation(Node*& r) {
-  Node* aux1(r->getLeft());
-  Node* aux2(aux1->getRight());
-
-  r->setLeft(aux2);
-  aux1->setRight(r);
-  r = aux1;
-}
-
-template <class T>
-void AVLTree<T>::doubleLeftRotation(Node*& r) {
-  simpleRightRotation(r->getRight());
-  simpleLeftRotation(r);
-}
-
-template <class T>
-void AVLTree<T>::doubleRightRotation(Node*& r) {
-  simpleLeftRotation(r->getLeft());
-  simpleRightRotation(r);
-}
-
-template <class T>
-void AVLTree<T>::doBalancing(Node*& r) {
-  switch (getBalanceFactor(r)) {
-    case -2:
-      if (getBalanceFactor(r->getLeft()) == -1) {
-        simpleRightRotation(r);
-      } else {
-        doubleRightRotation(r);
-      }
-      break;
-    case 2:
-      if (getBalanceFactor(r->getRight()) == 1) {
-        simpleLeftRotation(r);
-      } else {
-        doubleLeftRotation(r);
-      }
-      break;
-  }
-}
 
 #endif  // AVLTREE_H

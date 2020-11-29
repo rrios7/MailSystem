@@ -13,10 +13,8 @@ SettingsWindow::~SettingsWindow() {
 
 void SettingsWindow::on_primaryIndexAVLButton_clicked() {
   WindowData& data = WindowData::getInstance();
-  if (ui->primaryIndexAVLButton->isChecked())
-    data.setIndexTree(WindowData::AVL);
-  else
-    data.setIndexTree(WindowData::NoTree);
+  data.setIndexTree(
+      static_cast<WindowData::Tree>(data.getIndexTree() ^ WindowData::AVL));
 }
 
 void SettingsWindow::on_memorySearchCheckBox_clicked() {
@@ -25,4 +23,10 @@ void SettingsWindow::on_memorySearchCheckBox_clicked() {
     data.setMemorySearch(true);
   else
     data.setMemorySearch(false);
+}
+
+void SettingsWindow::on_paginatedIndexCheckBox_clicked() {
+  WindowData& data = WindowData::getInstance();
+  data.setIndexTree(static_cast<WindowData::Tree>(data.getIndexTree() ^
+                                                  WindowData::Paginated));
 }

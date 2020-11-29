@@ -36,8 +36,10 @@ void InboxWindow::openEmail(long long id,
 
 void InboxWindow::searchById(const long long id) {
   searchResults.clear();
-
-  if (WindowData::getInstance().getIndexTree() == WindowData::AVL)
+  WindowData& data = WindowData::getInstance();
+  if (data.getIndexTree() & WindowData::Paginated)
+    searchByIdInPaginatedTree(id);
+  else if (data.getIndexTree() & WindowData::AVL)
     searchByIdInTree(id);
   else
     searchByIdInFile(id);
@@ -60,13 +62,34 @@ void InboxWindow::searchByIdInFile(const long long id) {
 void InboxWindow::searchByIdInTree(const long long id) {
   WindowData& data = WindowData::getInstance();
 
-  qDebug() << "Primary Index Tree Height: " << data.primaryIndex.getHeight();
+  qDebug() << "Primary Index Tree Height: " << data.primaryIndex.height();
 
   PrimaryIndexEntry query{id};
-  auto result = data.primaryIndex.findData(query);
+  auto result = data.primaryIndex.retrieve(query);
   if (result != nullptr)
     searchResults.pushBack(
-        EmailDAO::getInstance().read(result->getData().getId()));
+        EmailDAO::getInstance().read(result->getValue().getId()));
+}
+
+void InboxWindow::searchByIdInPaginatedTree(const long long id) {
+  WindowData& data = WindowData::getInstance();
+
+  qDebug() << "Paginated Primary Index Tree Height: "
+           << data.paginatedPrimaryIndex.height();
+
+  PrimaryIndexEntry query{id};
+  auto result = data.paginatedPrimaryIndex.retrieve(query);
+  if (result != nullptr)
+    searchResults.pushBack(
+        EmailDAO::getInstance().read(result->getValue().getId()));
+  else {
+    auto primaryIndexResult = data.primaryIndex.retrieve(query);
+    if (primaryIndexResult != nullptr) {
+      data.paginatedPrimaryIndex.insert(primaryIndexResult->getValue());
+      searchResults.pushBack(
+          EmailDAO::getInstance().read(primaryIndexResult->getValue().getId()));
+    }
+  }
 }
 
 void InboxWindow::searchBySender(const char* sender) {
@@ -75,7 +98,7 @@ void InboxWindow::searchBySender(const char* sender) {
 
   if (data.isMemorySearchEnabled())
     searchBySenderInMemory(sender);
-  else if (data.getIndexTree() == WindowData::AVL) {
+  else if (data.getIndexTree() & WindowData::AVL) {
     auto result = searchByEmailInTree(sender, data.senderSecondaryIndex);
     for (auto id : result)
       searchByIdInTree(id);
@@ -131,15 +154,15 @@ void InboxWindow::searchBySenderInMemory(const char* sender) {
 List<long long> InboxWindow::searchByEmailInTree(
     const char* email,
     AVLTree<SecondaryIndexEntry>& tree) {
-  qDebug() << "Email Secondary Index Tree Height:  " << tree.getHeight();
+  qDebug() << "Email Secondary Index Tree Height:  " << tree.height();
 
   List<long long> queryResults;
 
   SecondaryIndexEntry query{email};
-  auto result = tree.findData(query);
+  auto result = tree.retrieve(query);
 
   if (result != nullptr)
-    for (long long id : result->getData().getReferenceList())
+    for (long long id : result->getValue().getReferenceList())
       queryResults.pushBack(id);
 
   return queryResults;
@@ -337,13 +360,17 @@ void InboxWindow::on_advancedSearchButton_clicked() {
         qDebug() << "A: " << *aPointer;
         qDebug() << "B: " << *bPointer;
 
-        queryResults.pushBack(*aPointer);
-
         if (*aPointer == *bPointer) {
+          queryResults.pushBack(*aPointer);
           ++aPointer;
           ++bPointer;
-        } else
+        } else if (*aPointer < *bPointer) {
+          queryResults.pushBack(*aPointer);
           ++aPointer;
+        } else {
+          queryResults.pushBack(*bPointer);
+          ++bPointer;
+        }
       }
 
       while (aPointer != a.end()) {

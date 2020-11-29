@@ -141,7 +141,7 @@ QRadioButton::indicator:checked {
       <enum>QFrame::Raised</enum>
      </property>
      <layout class="QGridLayout" name="gridLayout_2">
-      <item row="2" column="0">
+      <item row="3" column="0">
        <widget class="QLabel" name="primaryIndexSearchLabel">
         <property name="font">
          <font>
@@ -157,7 +157,7 @@ QRadioButton::indicator:checked {
         </property>
        </widget>
       </item>
-      <item row="2" column="1">
+      <item row="3" column="1">
        <widget class="QRadioButton" name="primaryIndexAVLButton">
         <property name="font">
          <font>
@@ -167,6 +167,26 @@ QRadioButton::indicator:checked {
         </property>
         <property name="text">
          <string>AVL</string>
+        </property>
+       </widget>
+      </item>
+      <item row="4" column="1">
+       <widget class="QCheckBox" name="paginatedIndexCheckBox">
+        <property name="text">
+         <string/>
+        </property>
+       </widget>
+      </item>
+      <item row="4" column="0">
+       <widget class="QLabel" name="paginatedIndexLabel">
+        <property name="font">
+         <font>
+          <family>Montserrat</family>
+          <pointsize>11</pointsize>
+         </font>
+        </property>
+        <property name="text">
+         <string>Enable Paginated Index Search</string>
         </property>
        </widget>
       </item>

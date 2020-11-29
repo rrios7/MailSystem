@@ -20,6 +20,8 @@ class SettingsWindow : public QWidget {
 
   void on_primaryIndexAVLButton_clicked();
 
+  void on_paginatedIndexCheckBox_clicked();
+
  private:
   Ui::SettingsWindow* ui;
 };
