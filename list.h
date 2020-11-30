@@ -39,6 +39,8 @@ class ListIterator {
     return iterator;
   }
 
+  node_pointer operator&() { return m_Ptr; }
+
   reference operator*() { return *m_Ptr->getDataPtr(); }
 
   pointer operator->() { return m_Ptr->m_Ptr; }
@@ -151,6 +153,8 @@ class List {
   void pushOrdered(const_reference elem) { insertOrdered(elem); }
   void pushBack(const_reference elem) { insert(m_Head->getPrev(), elem); }
   void popBack() { erase(m_Head->getPrev()); }
+
+  void erase(iterator it) { erase(&it); }
 
   void pushFront(const_reference elem) { insert(m_Head, elem); }
   void popFront() { erase(m_Head->getNext()); }

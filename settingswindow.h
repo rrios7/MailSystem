@@ -22,6 +22,12 @@ class SettingsWindow : public QWidget {
 
   void on_paginatedIndexCheckBox_clicked();
 
+  void on_hashTableCheckBox_clicked();
+
+  void on_serializeButton_clicked();
+
+  void on_deserializeButton_clicked();
+
  private:
   Ui::SettingsWindow* ui;
 };

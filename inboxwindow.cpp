@@ -37,9 +37,9 @@ void InboxWindow::openEmail(long long id,
 void InboxWindow::searchById(const long long id) {
   searchResults.clear();
   WindowData& data = WindowData::getInstance();
-  if (data.getIndexTree() & WindowData::Paginated)
+  if (data.getIndexType() & WindowData::Paginated)
     searchByIdInPaginatedTree(id);
-  else if (data.getIndexTree() & WindowData::AVL)
+  else if (data.getIndexType() & WindowData::AVL)
     searchByIdInTree(id);
   else
     searchByIdInFile(id);
@@ -98,11 +98,13 @@ void InboxWindow::searchBySender(const char* sender) {
 
   if (data.isMemorySearchEnabled())
     searchBySenderInMemory(sender);
-  else if (data.getIndexTree() & WindowData::AVL) {
+  else if (data.getIndexType() & WindowData::AVL) {
     auto result = searchByEmailInTree(sender, data.senderSecondaryIndex);
     for (auto id : result)
       searchByIdInTree(id);
-  } else
+  } else if (data.getIndexType() & WindowData::HashTable)
+    searchBySenderInHashTable(sender);
+  else
     searchBySenderInFile(sender);
 
   if (searchResults.empty()) {
@@ -149,6 +151,19 @@ void InboxWindow::searchBySenderInMemory(const char* sender) {
   while (pos < static_cast<int>(data.vectorInbox.length()) &&
          Tools::equalEmails(data.vectorInbox[pos].getSender(), sender))
     searchResults.pushBack(data.vectorInbox[pos++]);
+}
+
+void InboxWindow::searchBySenderInHashTable(const char* sender) {
+  qDebug() << "Search in Hash Table";
+  WindowData& data = WindowData::getInstance();
+  EmailDAO& db = EmailDAO::getInstance();
+  Email email;
+  for (long long id : data.senderHashTable.retrieve(std::string{sender})) {
+    email = db.read(id);
+    if (email.getId() == id && Tools::equalEmails(email.getSender(), sender)) {
+      searchResults.pushBack(email);
+    }
+  }
 }
 
 List<long long> InboxWindow::searchByEmailInTree(
@@ -310,7 +325,8 @@ void InboxWindow::on_newEmailButton_clicked() {
 void InboxWindow::on_advancedSearchButton_clicked() {
   WindowData& data = WindowData::getInstance();
 
-  if (data.getIndexTree() == WindowData::NoTree) {
+  if (data.getIndexType() == WindowData::NoTree ||
+      data.getIndexType() & WindowData::HashTable) {
     MessageBox::display(
         "Enable Searching by Index in order to use advanced search");
     return;

@@ -33,6 +33,7 @@ class InboxWindow : public QWidget {
   void searchBySender(const char* sender);
   void searchBySenderInFile(const char* sender);
   void searchBySenderInMemory(const char* sender);
+  void searchBySenderInHashTable(const char* sender);
 
   List<long long> searchByEmailInTree(const char* email,
                                       AVLTree<SecondaryIndexEntry>& tree);

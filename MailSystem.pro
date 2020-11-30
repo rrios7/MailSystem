@@ -37,6 +37,7 @@ HEADERS += \
     email.h \
     emaildao.h \
     emailwindow.h \
+    hashmap.h \
     inboxwindow.h \
     list.h \
     mainwindow.h \

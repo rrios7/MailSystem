@@ -6,6 +6,7 @@
 #include "avltree.h"
 #include "email.h"
 #include "emaildao.h"
+#include "hashmap.h"
 #include "paginatedavltree.h"
 #include "primaryindexentry.h"
 #include "secondaryindexentry.h"
@@ -20,7 +21,7 @@ class WindowData {
   }
 
  private:
-  WindowData() : memorySearch{false}, indexTree{NoTree} {
+  WindowData() : memorySearch{false}, indexType{NoTree} {
     std::fstream file{primaryIndexFileName, std::ios::in | std::ios::binary};
     // If Index is not yet made
     if (!file.is_open()) {
@@ -144,7 +145,12 @@ class WindowData {
  public:
   enum Page { InboxPage = 0, EmailPage, BackupPage, SettingsPage };
   enum Operation { None = 0, Read, Write, Update, Delete };
-  enum Tree { NoTree = 1 << 0, AVL = 1 << 1, Paginated = 1 << 2 };
+  enum Index {
+    NoTree = 1 << 0,
+    AVL = 1 << 1,
+    Paginated = 1 << 2,
+    HashTable = 1 << 3
+  };
 
  public:
   Email& getEmail() { return email; }
@@ -159,8 +165,8 @@ class WindowData {
   bool isMemorySearchEnabled() const { return memorySearch; }
   void setMemorySearch(bool value) { memorySearch = value; }
 
-  Tree getIndexTree() const { return indexTree; }
-  void setIndexTree(const Tree& value) { indexTree = value; }
+  Index getIndexType() const { return indexType; }
+  void setIndexType(const Index& value) { indexType = value; }
 
   void loadInboxToMemory() {
     EmailDAO& db = EmailDAO::getInstance();
@@ -173,6 +179,18 @@ class WindowData {
       email = db.read(++id);
     }
     vectorInbox.sort();
+  }
+
+  void loadHashTable() {
+    EmailDAO& db = EmailDAO::getInstance();
+    long long id = 0;
+    Email email = db.read(id);
+
+    while (db.next()) {
+      if (email.getId() == id && Tools::isValidEmail(email.getSender()))
+        senderHashTable.insert(email.getSender(), id);
+      email = db.read(++id);
+    }
   }
 
   void addToIndex() {
@@ -194,6 +212,7 @@ class WindowData {
   AVLTree<SecondaryIndexEntry> senderSecondaryIndex;
   AVLTree<SecondaryIndexEntry> receiverSecondaryIndex;
   PaginatedAVLTree<PrimaryIndexEntry> paginatedPrimaryIndex;
+  HashMap senderHashTable;
 
  private:
   // Window Data
@@ -201,7 +220,7 @@ class WindowData {
   Operation operation;
   Page previousPage;
   bool memorySearch;
-  Tree indexTree;
+  Index indexType;
 
   // Primary & Secondary Index File Names
   const std::string primaryIndexFileName = "primaryindex.dat";
