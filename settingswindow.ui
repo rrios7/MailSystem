@@ -359,6 +359,12 @@ QPushButton:hover {
           <height>25</height>
          </size>
         </property>
+        <property name="font">
+         <font>
+          <family>Montserrat</family>
+          <pointsize>11</pointsize>
+         </font>
+        </property>
         <property name="text">
          <string>Deserialize</string>
         </property>
@@ -371,6 +377,12 @@ QPushButton:hover {
           <width>0</width>
           <height>25</height>
          </size>
+        </property>
+        <property name="font">
+         <font>
+          <family>Montserrat</family>
+          <pointsize>11</pointsize>
+         </font>
         </property>
         <property name="text">
          <string>Serialize</string>

@@ -61,6 +61,4 @@ void SettingsWindow::on_deserializeButton_clicked() {
   data.setIndexType(static_cast<WindowData::Index>(data.getIndexType() |
                                                    WindowData::HashTable));
   ui->hashTableCheckBox->setChecked(true);
-
-  qDebug() << data.senderHashTable.count();
 }

@@ -68,6 +68,10 @@ class BackupWindow : public QWidget
 
   void on_searchButton_clicked();
 
+  void on_encryptButton_clicked();
+
+  void on_decryptButton_clicked();
+
  signals:
   void showPage(const WindowData::Page page);
 

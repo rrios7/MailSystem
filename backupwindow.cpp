@@ -5,6 +5,7 @@
 #include <fstream>
 #include "emaildao.h"
 #include "messagebox.h"
+#include "rsa.h"
 #include "tools.h"
 
 BackupWindow::BackupWindow(QWidget* parent)
@@ -474,4 +475,74 @@ void BackupWindow::on_searchButton_clicked() {
     searchById(id);
   else
     searchBySender(query.toStdString().c_str());
+}
+
+void BackupWindow::on_encryptButton_clicked() {
+  QString inputFileName = QFileDialog::getOpenFileName(
+      this, "Backup", "C:/", "CSV Backup Files (*.csv)");
+  QString outputFileName = QFileDialog::getSaveFileName(
+      this, "Encrypted Backup", "C:/", "CSV Backup Files (*.csv);");
+  QString privateKeyFileName = QFileDialog::getSaveFileName(
+      this, "Encryption Key", "C:/", "Encryption Key Files (*.bin)");
+
+  std::ifstream input{inputFileName.toStdString()};
+  std::ofstream output{outputFileName.toStdString()};
+
+  std::ofstream privateKey{privateKeyFileName.toStdString(), std::ios::binary};
+  List<std::pair<int, int>> keys = RSA::generateKeys();
+  privateKey.write(reinterpret_cast<char*>(&keys.back()),
+                   sizeof(std::pair<int, int>));
+
+  std::string password = ui->passwordLineEdit->text().toStdString();
+
+  if (!password.empty())
+    output << RSA::encrypt("requirePass=" + password, keys.front());
+
+  std::string line;
+  while (!input.eof()) {
+    getline(input, line, '\r');
+    output << RSA::encrypt(line, keys.front()) << "\r";
+  }
+}
+
+void BackupWindow::on_decryptButton_clicked() {
+  QString inputFileName = QFileDialog::getOpenFileName(
+      this, "Encrypted Backup", "C:/", "CSV Backup Files (*.csv)");
+  QString outputFileName = QFileDialog::getSaveFileName(
+      this, "Backup", "C:/", "CSV Backup Files (*.csv);");
+  QString privateKeyFileName = QFileDialog::getOpenFileName(
+      this, "Encryption Key", "C:/", "Encryption Key Files (*.bin)");
+
+  std::ifstream input{inputFileName.toStdString()};
+  std::ofstream output{outputFileName.toStdString()};
+
+  std::ifstream privateKey{privateKeyFileName.toStdString(), std::ios::binary};
+  std::pair<int, int> key;
+  privateKey.read(reinterpret_cast<char*>(&key), sizeof(std::pair<int, int>));
+
+  std::string line;
+  getline(input, line, '\r');
+  line = RSA::decrypt(line, key);
+
+  std::string password = ui->passwordLineEdit->text().toStdString();
+
+  if (line.substr(0, 12) == "requirePass=") {
+    if (password.empty()) {
+      MessageBox::display("This file needs a password to be decrypted");
+      return;
+    }
+
+    if (line.substr(12, password.size()) != password) {
+      MessageBox::display("Wrong password for encrypted file");
+      return;
+    }
+
+    output << line.substr(12 + password.size()) << '\r';
+  } else
+    output << line << '\r';
+
+  while (!input.eof()) {
+    getline(input, line, '\r');
+    output << RSA::decrypt(line, key) << '\r';
+  }
 }
